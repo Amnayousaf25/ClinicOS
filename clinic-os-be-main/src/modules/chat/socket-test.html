@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Module - Socket.IO Connection Test</title>
+    <script src="https://cdn.socket.io/4.7.0/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .panel {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .panel h2 {
+            margin-bottom: 15px;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+        
+        .log-entry.info {
+            border-left-color: #3498db;
+        }
+        
+        .log-entry.success {
+            border-left-color: #2ecc71;
+        }
+        
+        .log-entry.error {
+            border-left-color: #e74c3c;
+        }
+        
+        .log-entry.event {
+            border-left-color: #f39c12;
+        }
+        
+        .log-time {
+            color: #888;
+            margin-right: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔌 Chat Module - Socket.IO Connection Test</h1>
+            <p>Test WebSocket connection and chat functionality</p>
+        </div>
+        
+        <div class="content">
+            <!-- Connection Panel -->
+            <div class="panel">
+                <h2>Connection Settings</h2>
+                
+                <div id="connectionStatus" class="status disconnected">
+                    ⚫ Disconnected
+                </div>
+                
+                <div class="form-group">
+                    <label for="serverUrl">Server URL:</label>
+                    <input type="text" id="serverUrl" value="http://localhost:8080/chat" placeholder="http://localhost:8080/chat">
+                </div>
+                
+                <div class="form-group">
+                    <label for="userId">User ID (MongoDB ObjectId):</label>
+                    <input type="text" id="userId" placeholder="507f1f77bcf86cd799439011" value="507f1f77bcf86cd799439011">
+                </div>
+                
+                <button id="connectBtn" class="btn" onclick="connectSocket()">Connect</button>
+                <button id="disconnectBtn" class="btn btn-danger" onclick="disconnectSocket()" disabled>Disconnect</button>
+            </div>
+            
+            <!-- Chat Actions Panel -->
+            <div class="panel">
+                <h2>Chat Actions</h2>
+                
+                <div class="form-group">
+                    <label for="roomId">Room ID:</label>
+                    <input type="text" id="roomId" placeholder="507f1f77bcf86cd799439013">
+                </div>
+                
+                <button class="btn" onclick="joinRoom()" id="joinRoomBtn" disabled>Join Room</button>
+                <button class="btn" onclick="leaveRoom()" id="leaveRoomBtn" disabled>Leave Room</button>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="messageContent">Message Content:</label>
+                    <textarea id="messageContent" placeholder="Type your message here..."></textarea>
+                </div>
+                
+                <button class="btn" onclick="sendMessage()" id="sendMessageBtn" disabled>Send Message</button>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="messageIds">Message IDs (comma-separated, optional):</label>
+                    <input type="text" id="messageIds" placeholder="msg1, msg2 (leave empty to mark all)">
+                </div>
+                
+                <button class="btn" onclick="markAsRead()" id="markReadBtn" disabled>Mark as Read</button>
+            </div>
+        </div>
+        
+        <!-- Event Log -->
+        <div class="panel" style="margin: 20px;">
+            <h2>Event Log</h2>
+            <button class="btn" onclick="clearLog()" style="width: auto; margin-bottom: 10px;">Clear Log</button>
+            <div id="eventLog" class="log-container"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let isConnected = false;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateUI();
+        });
+        
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('eventLog');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="log-time">[${time}]</span>${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('eventLog').innerHTML = '';
+        }
+        
+        function updateUI() {
+            const statusEl = document.getElementById('connectionStatus');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const actionButtons = ['joinRoomBtn', 'sendMessageBtn', 'markReadBtn', 'leaveRoomBtn'];
+            
+            if (isConnected) {
+                statusEl.className = 'status connected';
+                statusEl.textContent = '🟢 Connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                actionButtons.forEach(id => {
+                    document.getElementById(id).disabled = false;
+                });
+            } else {
+                statusEl.className = 'status disconnected';
+                statusEl.textContent = '⚫ Disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                actionButtons.forEach(id => {
+                    document.getElementById(id).disabled = true;
+                });
+            }
+        }
+        
+        function connectSocket() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            const userId = document.getElementById('userId').value;
+            
+            if (!userId) {
+                alert('Please enter a User ID');
+                return;
+            }
+            
+            if (!userId.match(/^[0-9a-fA-F]{24}$/)) {
+                alert('Invalid MongoDB ObjectId format');
+                return;
+            }
+            
+            log(`Connecting to ${serverUrl} with userId: ${userId}...`, 'info');
+            
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.className = 'status connecting';
+            statusEl.textContent = '🟡 Connecting...';
+            
+            socket = io(serverUrl, {
+                query: { userId: userId },
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionDelay: 1000,
+            });
+            
+            // Connection events
+            socket.on('connect', () => {
+                isConnected = true;
+                updateUI();
+                log(`✅ Connected! Socket ID: ${socket.id}`, 'success');
+            });
+            
+            socket.on('connected', (data) => {
+                log(`✅ Server confirmed connection: ${JSON.stringify(data)}`, 'success');
+            });
+            
+            socket.on('disconnect', (reason) => {
+                isConnected = false;
+                updateUI();
+                log(`❌ Disconnected: ${reason}`, 'error');
+            });
+            
+            socket.on('connect_error', (error) => {
+                isConnected = false;
+                updateUI();
+                log(`❌ Connection error: ${error.message}`, 'error');
+            });
+            
+            // Chat events
+            socket.on('room-joined', (data) => {
+                log(`📥 Room joined: ${JSON.stringify(data)}`, 'event');
+            });
+            
+            socket.on('message-received', (data) => {
+                log(`📨 Message received: ${JSON.stringify(data, null, 2)}`, 'event');
+            });
+            
+            socket.on('messages-read', (data) => {
+                log(`✅ Messages marked as read: ${JSON.stringify(data)}`, 'success');
+            });
+            
+            socket.on('error', (error) => {
+                log(`❌ Error: ${error.message} (Code: ${error.code || 'N/A'})`, 'error');
+            });
+        }
+        
+        function disconnectSocket() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                isConnected = false;
+                updateUI();
+                log('🔌 Disconnected manually', 'info');
+            }
+        }
+        
+        function joinRoom() {
+            const roomId = document.getElementById('roomId').value;
+            
+            if (!roomId) {
+                alert('Please enter a Room ID');
+                return;
+            }
+            
+            if (!roomId.match(/^[0-9a-fA-F]{24}$/)) {
+                alert('Invalid MongoDB ObjectId format');
+                return;
+            }
+            
+            log(`Joining room: ${roomId}...`, 'info');
+            socket.emit('join-room', { roomId: roomId });
+        }
+        
+        function leaveRoom() {
+            const roomId = document.getElementById('roomId').value;
+            
+            if (!roomId) {
+                alert('Please enter a Room ID');
+                return;
+            }
+            
+            log(`Leaving room: ${roomId}...`, 'info');
+            socket.emit('leave-room', { roomId: roomId });
+        }
+        
+        function sendMessage() {
+            const roomId = document.getElementById('roomId').value;
+            const content = document.getElementById('messageContent').value;
+            
+            if (!roomId) {
+                alert('Please enter a Room ID');
+                return;
+            }
+            
+            if (!content.trim()) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            log(`Sending message to room ${roomId}: "${content}"`, 'info');
+            socket.emit('send-message', {
+                roomId: roomId,
+                content: content
+            });
+            
+            // Clear message input
+            document.getElementById('messageContent').value = '';
+        }
+        
+        function markAsRead() {
+            const roomId = document.getElementById('roomId').value;
+            const messageIdsInput = document.getElementById('messageIds').value;
+            
+            if (!roomId) {
+                alert('Please enter a Room ID');
+                return;
+            }
+            
+            const payload = { roomId: roomId };
+            
+            if (messageIdsInput.trim()) {
+                const messageIds = messageIdsInput.split(',').map(id => id.trim()).filter(id => id);
+                payload.messageIds = messageIds;
+                log(`Marking specific messages as read in room ${roomId}: ${messageIds.join(', ')}`, 'info');
+            } else {
+                log(`Marking all messages as read in room ${roomId}`, 'info');
+            }
+            
+            socket.emit('mark-as-read', payload);
+        }
+    </script>
+</body>
+</html>
+

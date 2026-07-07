@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "sourceMap": true,
+    "incremental": true,
+    "rootDir": "./src",
+    // Dev/staging builds go to dist-dev/ so they never touch the committed
+    // prod dist/. This is critical because dist/ is committed to git (Render
+    // runs `node dist/main` without a build step) — without a separate dev
+    // outDir, every `yarn start:dev` would pollute the committed build and
+    // show up as staged changes on every commit.
+    "outDir": "./dist-dev",
+    // Keep the incremental cache inside the gitignored dist-dev/ directory
+    // so `tsconfig.dev.tsbuildinfo` stops appearing at the repo root.
+    "tsBuildInfoFile": "./dist-dev/.tsbuildinfo"
+  },
+  "exclude": ["node_modules", "dist", "dist-dev", "test", "**/*.spec.ts"]
+}

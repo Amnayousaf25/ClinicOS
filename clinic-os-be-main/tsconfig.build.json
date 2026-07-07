@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    // Keep the incremental build cache inside dist/ so it never lands at the
+    // repo root as tsconfig.build.tsbuildinfo. dist/ is committed anyway, so
+    // the cache either rides along or gets regenerated on the next build.
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  },
+  "exclude": ["node_modules", "test", "dist", "dist-dev", "**/*spec.ts"]
+}

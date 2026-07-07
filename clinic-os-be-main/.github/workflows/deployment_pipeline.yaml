@@ -1,0 +1,72 @@
+name: Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # ─── Job 1: Secret scanning ───────────────────────────────────────────────
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0              # full history scan, not just latest commit
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  # ─── Job 2: Deploy ────────────────────────────────────────────────────────
+  deploy:
+    runs-on: ubuntu-latest
+    needs: gitleaks                   # blocks deploy if gitleaks job fails
+    permissions:
+      contents: read
+
+    steps:
+      # ─── 1. Checkout ────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ─── 2. Deploy to EC2 ───────────────────────────────────────────────
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: GH_TOKEN
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+              export NVM_DIR="$HOME/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+              nvm use 25
+              node -v
+              
+            cd /home/ubuntu/clinic-os-be
+            
+            # ── Auth ────────────────────────────────────────────────────────
+            git config --local credential.helper \
+              '!f() { echo "username=x-access-token"; echo "password='"$GH_TOKEN"'"; }; f'
+
+            # ── Pull latest ─────────────────────────────────────────────────
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+
+            # ── Install & build ─────────────────────────────────────────────
+            yarn install
+            yarn run build
+            # ── Graceful restart ────────────────────────────────────────────
+            pm2 reload clinic-be || pm2 start "yarn start:prod" --name clinic-be
+            pm2 save
+            # ── Cleanup ─────────────────────────────────────────────────────
+            git config --local --unset credential.helper

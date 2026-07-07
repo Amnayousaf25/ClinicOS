@@ -1,0 +1,23 @@
+export enum USER_ROLES {
+  OWNER = 'OWNER',
+  ADMIN = 'ADMIN',
+  MEMBER = 'MEMBER',
+  VIEWER = 'VIEWER',
+}
+
+export enum USER_STATUS {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  PENDING = 'PENDING',
+  UNAPPROVED = 'UNAPPROVED',
+}
+
+export const NOT_ALLOWED_USERS = [
+  USER_STATUS.INACTIVE,
+  USER_STATUS.UNAPPROVED,
+  USER_STATUS.PENDING,
+];
+
+export const MEDIA_FOLDER_NAME = {
+  PROFILE: 'profile',
+};

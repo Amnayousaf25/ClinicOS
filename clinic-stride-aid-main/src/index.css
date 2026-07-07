@@ -1,0 +1,271 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 220 25% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 12%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 258 55% 58%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 18% 93%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 168 60% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.75rem;
+
+    --success: 152 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 12% 46%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 199 89% 96%;
+    --sidebar-accent-foreground: 199 89% 35%;
+    --sidebar-border: 220 15% 93%;
+    --sidebar-ring: 199 89% 48%;
+
+    --shadow-3d: 0 4px 14px -2px hsl(220 25% 12% / 0.06), 0 2px 6px -2px hsl(220 25% 12% / 0.04);
+    --shadow-3d-hover: 0 8px 28px -4px hsl(220 25% 12% / 0.1), 0 4px 10px -4px hsl(220 25% 12% / 0.05);
+    --shadow-3d-active: 0 2px 8px -2px hsl(220 25% 12% / 0.08);
+    --shadow-primary: 0 10px 40px -8px hsl(199 89% 48% / 0.4);
+    --gradient-hero: radial-gradient(ellipse at 50% 60%, hsl(199 89% 70% / 0.35), transparent 60%);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  .shadow-3d {
+    box-shadow: var(--shadow-3d);
+  }
+  .shadow-3d-hover {
+    box-shadow: var(--shadow-3d-hover);
+  }
+  .shadow-3d-active {
+    box-shadow: var(--shadow-3d-active);
+  }
+  .shadow-primary-glow {
+    box-shadow: var(--shadow-primary);
+  }
+  .card-3d {
+    box-shadow: var(--shadow-3d);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .card-3d:hover {
+    box-shadow: var(--shadow-3d-hover);
+    transform: translateY(-1px);
+  }
+  .btn-3d {
+    box-shadow: var(--shadow-3d), inset 0 1px 0 hsl(0 0% 100% / 0.15);
+    transition: all 0.15s ease;
+  }
+  .btn-3d:hover {
+    box-shadow: var(--shadow-3d-hover), inset 0 1px 0 hsl(0 0% 100% / 0.15);
+    transform: translateY(-1px);
+  }
+  .btn-3d:active {
+    box-shadow: var(--shadow-3d-active);
+    transform: translateY(0px);
+  }
+  .marquee {
+    display: flex;
+    gap: 3rem;
+    animation: marquee 28s linear infinite;
+    width: max-content;
+    will-change: transform;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  .text-stroke {
+    -webkit-text-stroke: 1.5px hsl(var(--foreground));
+    color: transparent;
+  }
+  /* Animated mesh gradient blob */
+  @keyframes blob-drift {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    33% { transform: translate(30px,-40px) scale(1.1); }
+    66% { transform: translate(-20px,30px) scale(0.95); }
+  }
+  .blob { transform: translateZ(0); }
+  /* Subtle grain noise */
+  .noise::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+    opacity: 0.06;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* Conic gradient border on hover */
+  .gradient-border {
+    position: relative;
+    background: hsl(var(--card));
+  }
+  .gradient-border::before {
+    content: '';
+    position: absolute; inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from var(--angle, 0deg), hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)), hsl(var(--primary)));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    opacity: 0;
+    transition: opacity .35s ease;
+  }
+  .gradient-border:hover::before { opacity: 1; animation: spin-angle 4s linear infinite; }
+  @property --angle {
+    syntax: '<angle>'; initial-value: 0deg; inherits: false;
+  }
+  @keyframes spin-angle {
+    to { --angle: 360deg; }
+  }
+  /* Animated dotted grid background */
+  .grid-bg {
+    background-image: radial-gradient(circle at 1px 1px, hsl(var(--foreground) / 0.08) 1px, transparent 0);
+    background-size: 28px 28px;
+  }
+  .mask-radial {
+    mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  }
+  .glass {
+    background: hsl(var(--card) / 0.6);
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+  /* Shimmer for buttons */
+  .shimmer {
+    position: relative; overflow: hidden;
+  }
+  .shimmer::after {
+    content: '';
+    position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.25), transparent);
+    transform: skewX(-20deg);
+    animation: shimmer 3.5s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    50% { left: 130%; }
+    100% { left: 130%; }
+  }
+  /* Pill button with bold glowing comets orbiting the border */
+  .cta-orbit {
+    position: relative;
+    background: transparent !important;
+    color: hsl(var(--foreground)) !important;
+    border: 2.5px solid hsl(var(--foreground) / 0.15) !important;
+    overflow: hidden;
+    isolation: isolate;
+    z-index: 0;
+    transition: transform .25s cubic-bezier(.2,.8,.2,1), border-color .25s ease;
+  }
+  .cta-orbit:hover {
+    transform: translateY(-2px) scale(1.02);
+    border-color: hsl(var(--foreground) / 0.3) !important;
+  }
+  /* Primary comet — bright, sharp */
+  .cta-orbit::before {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 240%; aspect-ratio: 1 / 1;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 270deg,
+      hsl(var(--accent) / 0.6) 300deg,
+      hsl(var(--secondary)) 335deg,
+      hsl(var(--primary)) 355deg,
+      #fff 359deg,
+      transparent 360deg
+    );
+    transform: translate(-50%, -50%) rotate(0deg);
+    z-index: -2;
+    filter: saturate(1.5) drop-shadow(0 0 8px hsl(var(--primary) / 0.6));
+    animation: cta-spin 3.5s linear infinite;
+    will-change: transform;
+  }
+  /* Counter-rotating soft halo comet */
+  .cta-orbit::after {
+    content: '';
+    position: absolute;
+    inset: 2.5px;
+    border-radius: inherit;
+    background:
+      radial-gradient(120% 200% at 50% 120%, hsl(var(--primary) / 0.08), transparent 60%),
+      hsl(var(--background));
+    z-index: -1;
+    box-shadow: inset 0 0 0 1px hsl(var(--background));
+  }
+  /* Outer breathing glow */
+  .cta-orbit > * { position: relative; z-index: 1; }
+  .cta-orbit {
+    box-shadow:
+      0 0 0 0 hsl(var(--primary) / 0),
+      0 8px 24px -10px hsl(var(--primary) / 0.35);
+  }
+  .cta-orbit:hover::before { animation-duration: 1.4s; }
+  @keyframes cta-spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+  @keyframes cta-breathe {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / 0), 0 8px 24px -10px hsl(var(--primary) / 0.3); }
+    50%      { box-shadow: 0 0 28px -2px hsl(var(--secondary) / 0.35), 0 14px 36px -10px hsl(var(--primary) / 0.55); }
+  }
+  /* Marquee mask fade */
+  .mask-x {
+    mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee,
+    .gradient-border:hover::before,
+    .cta-orbit::before,
+    .cta-orbit:hover::before {
+      animation: none !important;
+    }
+    .cta-orbit,
+    .cta-orbit:hover {
+      transform: none;
+      transition: border-color .2s ease;
+    }
+  }
+}
