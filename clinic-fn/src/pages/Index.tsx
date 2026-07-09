@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import Logo from '@/components/Logo';
 import BookDemoDialog from '@/components/BookDemoDialog';
@@ -30,6 +30,8 @@ import {
   Search,
   Home,
   Settings as SettingsIcon,
+  Menu,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -53,18 +55,29 @@ const sampleAppointments = [
 const dashboardTabs = ['Today', 'Patients', 'Calendar', 'Reports'] as const;
 type DashTab = typeof dashboardTabs[number];
 
+// Map sidebar labels to the matching tab
+const sidebarTabMap: Record<string, DashTab | null> = {
+  Dashboard: 'Today',
+  Appointments: 'Today',
+  Patients: 'Patients',
+  Intake: null,
+  Reports: 'Reports',
+  Settings: null,
+};
+
 const DashboardPrototype = () => {
   const [tab, setTab] = useState<DashTab>('Today');
   const [tick, setTick] = useState(0);
+  const [userOverride, setUserOverride] = useState(false);
   const reduce = useReducedMotion();
   useEffect(() => {
     if (reduce) return;
     const i = setInterval(() => setTick((t) => t + 1), 2200);
     return () => clearInterval(i);
   }, [reduce]);
-  // Auto-rotate tabs so it looks like a live product walkthrough
+  // Auto-rotate tabs — pause while user has manually clicked
   useEffect(() => {
-    if (reduce) return;
+    if (reduce || userOverride) return;
     const i = setInterval(() => {
       setTab((t) => {
         const idx = dashboardTabs.indexOf(t);
@@ -72,8 +85,16 @@ const DashboardPrototype = () => {
       });
     }, 4000);
     return () => clearInterval(i);
-  }, [reduce]);
+  }, [reduce, userOverride]);
   const liveCount = 24 + (tick % 3);
+
+  const handleSidebarClick = (label: string) => {
+    const mapped = sidebarTabMap[label];
+    if (mapped) {
+      setTab(mapped);
+      setUserOverride(true);
+    }
+  };
 
   return (
     <div className="relative rounded-[2rem] bg-black p-2 lg:p-3 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45)]">
@@ -100,20 +121,31 @@ const DashboardPrototype = () => {
             </div>
             <div className="mt-4 space-y-1">
               {[
-                { icon: Home, label: 'Dashboard', active: true },
+                { icon: Home, label: 'Dashboard' },
                 { icon: Calendar, label: 'Appointments' },
                 { icon: Users, label: 'Patients' },
                 { icon: ClipboardList, label: 'Intake' },
                 { icon: BarChart3, label: 'Reports' },
                 { icon: SettingsIcon, label: 'Settings' },
-              ].map((it) => (
-                <div key={it.label}
-                  className={`flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${it.active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-muted'
-                    }`}>
-                  <it.icon className="w-4 h-4 shrink-0" />
-                  <span className="hidden lg:inline truncate">{it.label}</span>
-                </div>
-              ))}
+              ].map((it) => {
+                const mapped = sidebarTabMap[it.label];
+                const isActive = mapped === tab || (it.label === 'Dashboard' && tab === 'Today' && !['Patients','Reports'].includes(tab));
+                return (
+                  <div
+                    key={it.label}
+                    onClick={() => handleSidebarClick(it.label)}
+                    title={mapped ? `View ${it.label}` : it.label}
+                    className={`flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-colors select-none ${
+                      mapped === tab
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        : 'text-sidebar-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <it.icon className="w-4 h-4 shrink-0" />
+                    <span className="hidden lg:inline truncate">{it.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </aside>
 
@@ -724,6 +756,21 @@ const ScrollScaleDashboard = () => {
 
 const Index = () => {
   const [demoOpen, setDemoOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterSubmitting, setNewsletterSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail) return;
+    setNewsletterSubmitting(true);
+    // Redirect to /register with email pre-filled
+    setTimeout(() => {
+      navigate(`/register?email=${encodeURIComponent(newsletterEmail)}`);
+    }, 400);
+  };
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden relative">
       <BookDemoDialog open={demoOpen} onOpenChange={setDemoOpen} />
@@ -735,7 +782,7 @@ const Index = () => {
       <header className="fixed top-0 left-0 right-0 z-50">
         <div className="mx-4 mt-3">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between rounded-2xl glass backdrop-blur-md shadow-3d">
-            <Logo size="md" />
+            <Link to="/"><Logo size="md" /></Link>
             <nav className="hidden md:flex items-center gap-7 text-sm font-semibold text-muted-foreground">
               <a href="#features" className="hover:text-foreground transition-colors">Features</a>
               <a href="#preview" className="hover:text-foreground transition-colors">Live preview</a>
@@ -751,8 +798,57 @@ const Index = () => {
                   Get Started Free
                 </Button>
               </Link>
+              {/* Mobile menu button */}
+              <button
+                type="button"
+                className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setMobileMenuOpen((o) => !o)}
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </button>
             </div>
           </div>
+
+          {/* Mobile dropdown */}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                transition={{ duration: 0.2 }}
+                className="max-w-7xl mx-auto mt-2 rounded-2xl glass backdrop-blur-md shadow-3d-hover border border-border/60 px-4 py-3 flex flex-col gap-1"
+              >
+                {[
+                  { label: 'Features', href: '#features' },
+                  { label: 'Live preview', href: '#preview' },
+                  { label: 'Customers', href: '#testimonials' },
+                ].map(({ label, href }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                  >
+                    {label}
+                  </a>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); setDemoOpen(true); }}
+                  className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                >
+                  Book demo
+                </button>
+                <div className="border-t border-border/60 mt-1 pt-2">
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full rounded-xl h-10 text-sm font-bold">Get Started Free</Button>
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </header>
 
@@ -843,7 +939,7 @@ const Index = () => {
 
 
       {/* FEATURES section header */}
-      <section id="features" className="pt-10 pb-2">
+      <section id="features" className="pt-10 pb-2" style={{ scrollMarginTop: '90px' }}>
 
         <div className="max-w-3xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 text-primary text-xs font-bold tracking-widest uppercase mb-4">
@@ -869,7 +965,7 @@ const Index = () => {
 
 
       {/* TESTIMONIALS */}
-      <section id="testimonials" className="py-16">
+      <section id="testimonials" className="py-16" style={{ scrollMarginTop: '90px' }}>
         <div className="max-w-7xl mx-auto px-6">
           <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={viewportOnce} transition={{ duration: 0.45, ease }}
             className="text-center mb-16">
@@ -904,7 +1000,7 @@ const Index = () => {
       </section>
 
       {/* CTA */}
-      <section className="py-12">
+      <section id="pricing" className="py-12" style={{ scrollMarginTop: '90px' }}>
         <div className="max-w-5xl mx-auto px-6">
           <motion.div initial={{ opacity: 0, scale: 0.98 }} whileInView={{ opacity: 1, scale: 1 }} viewport={viewportOnce} transition={{ duration: 0.45, ease }}
             className="relative rounded-[2rem] overflow-hidden bg-foreground text-background p-12 lg:p-20 text-center">
@@ -917,13 +1013,13 @@ const Index = () => {
                 Join 500+ clinics running on ClinicOS. Start free — no credit card needed.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
-                <Link to="/login">
+                <Link to="/register">
                   <Button size="lg" className="rounded-full h-14 px-10 text-base font-bold bg-background text-foreground hover:bg-background/90 shadow-xl">
-                    Start Free <ArrowRight className="w-5 h-5 ml-2" />
+                    Start Free Trial <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
                 <Link to="/login" className="inline-flex items-center justify-center rounded-full px-4 py-3 text-sm font-semibold text-background/90 hover:text-background underline-offset-4 hover:underline">
-                  Login
+                  Already have an account? Login
                 </Link>
                 <Button type="button" onClick={() => setDemoOpen(true)} size="lg" variant="outline" className="rounded-full h-14 px-10 text-base font-bold bg-transparent border-2 border-background/30 hover:border-background/60 hover:bg-background/10 text-background">
                   Book a Demo
@@ -946,31 +1042,37 @@ const Index = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
               {/* Brand + Newsletter */}
               <div className="lg:col-span-5 space-y-6">
-                <Logo size="md" />
+                <Link to="/"><Logo size="md" /></Link>
                 <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
-                  The intelligent operating system for modern clinics. Scheduling, intake, reminders & analytics — unified in one place.
+                  The intelligent operating system for modern clinics. Scheduling, intake, reminders &amp; analytics — unified in one place.
                 </p>
 
-                {/* Newsletter card */}
+                {/* Newsletter / quick-signup card */}
                 <div className="rounded-2xl border border-border/60 bg-background/60 backdrop-blur-sm p-5 max-w-md">
                   <p className="text-xs font-bold uppercase tracking-widest text-foreground mb-1">Start your free account</p>
                   <p className="text-xs text-muted-foreground mb-3">Enter your email to get started. No credit card required.</p>
-                  <form
-                    onSubmit={(e) => e.preventDefault()}
-                    className="flex gap-2"
-                  >
+                  <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
                     <input
                       type="email"
                       required
+                      value={newsletterEmail}
+                      onChange={(e) => setNewsletterEmail(e.target.value)}
                       placeholder="you@clinic.com"
                       className="flex-1 min-w-0 h-10 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
                     />
                     <button
                       type="submit"
-                      className="h-10 px-4 rounded-xl bg-foreground text-background text-sm font-bold hover:bg-foreground/90 active:scale-[0.97] transition-all whitespace-nowrap inline-flex items-center gap-1.5"
+                      disabled={newsletterSubmitting}
+                      className="h-10 px-4 rounded-xl bg-foreground text-background text-sm font-bold hover:bg-foreground/90 active:scale-[0.97] transition-all whitespace-nowrap inline-flex items-center gap-1.5 disabled:opacity-60"
                     >
-                      Sign Up
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      {newsletterSubmitting ? (
+                        <span className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          Sign Up
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
                     </button>
                   </form>
                 </div>
@@ -978,15 +1080,18 @@ const Index = () => {
                 {/* Socials */}
                 <div className="flex items-center gap-2 pt-1">
                   {[
-                    { label: 'X', href: '#' },
-                    { label: 'in', href: '#' },
-                    { label: 'Gh', href: '#' },
-                    { label: '@', href: '#' },
+                    { label: 'X', title: 'Follow on X (Twitter)', href: 'https://twitter.com' },
+                    { label: 'in', title: 'Connect on LinkedIn', href: 'https://linkedin.com' },
+                    { label: 'Gh', title: 'View on GitHub', href: 'https://github.com' },
+                    { label: '@', title: 'Contact via Email', href: 'mailto:hello@clinicos.io' },
                   ].map((s) => (
                     <a
                       key={s.label}
                       href={s.href}
-                      aria-label={s.label}
+                      title={s.title}
+                      aria-label={s.title}
+                      target={s.href.startsWith('http') ? '_blank' : undefined}
+                      rel={s.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                       className="group w-10 h-10 rounded-xl border border-border bg-background/60 backdrop-blur-sm flex items-center justify-center text-xs font-bold text-muted-foreground hover:text-primary hover:border-primary/40 hover:-translate-y-0.5 transition-all"
                     >
                       {s.label}
@@ -998,27 +1103,77 @@ const Index = () => {
               {/* Links */}
               <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-8">
                 {[
-                  { title: 'Product', items: ['Features', 'Pricing', 'Changelog', 'Roadmap'] },
-                  { title: 'Company', items: ['About', 'Blog', 'Careers', 'Contact'] },
-                  { title: 'Resources', items: ['Docs', 'Help center', 'Community', 'Status'] },
-                  { title: 'Legal', items: ['Privacy', 'Terms', 'Security', 'Cookies'] },
+                  {
+                    title: 'Product',
+                    items: [
+                      { label: 'Features', href: '#features' },
+                      { label: 'Pricing', href: '#pricing' },
+                      { label: 'Live preview', href: '#preview' },
+                      { label: 'Customers', href: '#testimonials' },
+                    ],
+                  },
+                  {
+                    title: 'Company',
+                    items: [
+                      { label: 'About', href: '/about' },
+                      { label: 'Blog', href: '/blog' },
+                      { label: 'Careers', href: '/careers' },
+                      { label: 'Contact', href: 'mailto:hello@clinicos.io' },
+                    ],
+                  },
+                  {
+                    title: 'Platform',
+                    items: [
+                      { label: 'Dashboard', href: '/login' },
+                      { label: 'Appointments', href: '/login' },
+                      { label: 'Patients', href: '/login' },
+                      { label: 'Reports', href: '/login' },
+                    ],
+                  },
+                  {
+                    title: 'Legal',
+                    items: [
+                      { label: 'Privacy policy', href: '/privacy' },
+                      { label: 'Terms of use', href: '/terms' },
+                      { label: 'Security', href: '/security' },
+                      { label: 'Cookie policy', href: '/cookies' },
+                    ],
+                  },
                 ].map((col) => (
                   <div key={col.title}>
                     <p className="text-xs font-bold uppercase tracking-widest text-foreground mb-5">{col.title}</p>
                     <ul className="space-y-3">
-                      {col.items.map((item) => (
-                        <li key={item}>
-                          <a
-                            href="#"
-                            className="group inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <span className="relative">
-                              {item}
-                              <span className="absolute left-0 -bottom-0.5 h-px w-full bg-gradient-to-r from-primary to-secondary scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300" />
-                            </span>
-                          </a>
-                        </li>
-                      ))}
+                      {col.items.map((item) => {
+                        const isExternal = item.href.startsWith('mailto:');
+                        const isInternal = item.href.startsWith('/');
+                        return (
+                          <li key={item.label}>
+                            {isInternal ? (
+                              <Link
+                                to={item.href}
+                                className="group inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <span className="relative">
+                                  {item.label}
+                                  <span className="absolute left-0 -bottom-0.5 h-px w-full bg-gradient-to-r from-primary to-secondary scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300" />
+                                </span>
+                              </Link>
+                            ) : (
+                              <a
+                                href={item.href}
+                                target={isExternal ? '_blank' : undefined}
+                                rel={isExternal ? 'noopener noreferrer' : undefined}
+                                className="group inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <span className="relative">
+                                  {item.label}
+                                  <span className="absolute left-0 -bottom-0.5 h-px w-full bg-gradient-to-r from-primary to-secondary scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300" />
+                                </span>
+                              </a>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ))}
@@ -1030,12 +1185,16 @@ const Index = () => {
               <p className="text-xs text-muted-foreground">
                 © {dayjs().year()} ClinicOS — Crafted with care.
               </p>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/60 border border-border/60">
-                <span className="relative flex w-2 h-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-success/40 animate-ping" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
-                </span>
-                <span className="text-xs text-foreground font-semibold">All systems operational</span>
+              <div className="flex items-center gap-4">
+                <Link to="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium">Login</Link>
+                <Link to="/register" className="text-xs text-muted-foreground hover:text-foreground transition-colors font-medium">Sign up free</Link>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/60 border border-border/60">
+                  <span className="relative flex w-2 h-2">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-success/40 animate-ping" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+                  </span>
+                  <span className="text-xs text-foreground font-semibold">All systems operational</span>
+                </div>
               </div>
             </div>
           </div>

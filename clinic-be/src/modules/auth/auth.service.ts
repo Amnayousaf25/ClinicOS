@@ -209,7 +209,7 @@ export class AuthService {
       throw new BadRequestException('Invalid invitation');
     user.password = await bcrypt.hash(dto.password, 10);
     user.invitationStatus = 'accepted' as any;
-    user.invitationToken = '' as any;
+    user.invitationToken = null as any;
     user.isActive = true;
     await user.save();
     return this.generateTokens(user);

@@ -182,6 +182,7 @@ export class UsersService implements OnModuleInit {
       process.env.APP_URL ||
       'http://localhost:8080';
     const inviteLink = `${frontendUrl.replace(/\/$/, '')}/invite/${token}`;
+    this.logger.log(`[INVITATION LINK] ${inviteLink}`);
     const roleLabel =
       String(dto.role || 'staff')
         .charAt(0)

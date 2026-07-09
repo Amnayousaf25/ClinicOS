@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useFormik } from 'formik';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import Logo from '@/components/Logo';
@@ -30,9 +30,11 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const prefillEmail = searchParams.get('email') || '';
 
   const formik = useFormik({
-    initialValues,
+    initialValues: { ...initialValues, email: prefillEmail },
     validationSchema: registerSchema,
     validateOnChange: true, // Ensured real-time keystroke evaluation
     onSubmit: async (values, { setSubmitting, setStatus }) => {

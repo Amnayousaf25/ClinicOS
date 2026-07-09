@@ -117,6 +117,7 @@ export async function validateInviteApi(token: string): Promise<InviteValidateRe
 
 export async function acceptInviteApi(token: string, email: string, password: string) {
   const { data } = await api.post<{ data: LoginResponse }>('/auth/invite/accept', { token, email, password });
+  const r = data.data;
   sessionStorage.removeItem('clinicos_token');
   sessionStorage.removeItem('clinicos_refresh_token');
   localStorage.setItem('clinicos_token', r.accessToken);

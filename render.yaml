@@ -1,0 +1,57 @@
+# Render Blueprint specification for ClinicOS
+# https://render.com/docs/blueprint-spec
+
+services:
+  # 1. Backend NestJS Web Service
+  - type: web
+    name: clinicos-api
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    rootDir: clinic-be
+    buildCommand: yarn install --frozen-lockfile --production=false && yarn build
+    startCommand: node dist/main
+    healthCheckPath: /api/v1
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 24.18.0
+      - key: NODE_ENV
+        value: prod
+      - key: PORT
+        value: 4002
+      # Secrets to be configured in Render dashboard
+      - key: MONGODB_URI
+        sync: false
+      - key: EXTERNAL_MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+
+  # 2. Frontend React/Vite Static Site
+  - type: static
+    name: clinicos-web
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: clinic-fn
+    buildCommand: npm install && npm run build
+    publishPath: dist
+    autoDeploy: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: clinicos-api
+          type: web
+          property: host
