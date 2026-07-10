@@ -28,7 +28,7 @@
     "start:staging": "cross-env NODE_ENV=staging nest start --watch --path tsconfig.dev.json",
     "link:commit": "commitlint -E HUSKY_GIT_PARAMS",
     "lint-staged": "lint-staged --concurrent false",
-    "prepare": "husky install"
+    "prepare": "husky install || true"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "latest",
