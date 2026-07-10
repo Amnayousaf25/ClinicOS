@@ -25,19 +25,48 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new CustomValidationPipe());
 
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS?.split(',').map((s) => s.trim()).filter(Boolean) || [
+  // Build the static allowlist from the env var
+  const staticOrigins: string[] = (
+    process.env.ALLOWED_ORIGINS?.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean) || []
+  ).concat([
     'http://localhost:8080',
     'http://localhost:8082',
-    'https://clinic-stride-aid.vercel.app',
-  ]).concat([
     'http://127.0.0.1:8080',
     'http://127.0.0.1:8082',
+    'https://clinic-stride-aid.vercel.app',
   ]);
-  console.log('CORS allowed origins:', allowedOrigins);
+
+  // Deduplicate
+  const allowedSet = [...new Set(staticOrigins)];
+  console.log('CORS allowed origins:', allowedSet);
 
   app.enableCors({
-    origin: allowedOrigins,
+    /**
+     * Use a function so we can:
+     *  1. Allow any origin in the static allowlist (exact match).
+     *  2. Allow ANY *.vercel.app subdomain — this covers Vercel preview
+     *     deployments whose URL we can't know ahead of time.
+     *  3. Allow requests with no Origin header (server-to-server / curl).
+     */
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // No origin = server-to-server request or same-origin — allow it.
+      if (!origin) return callback(null, true);
+
+      // Exact match against the static list
+      if (allowedSet.includes(origin)) return callback(null, true);
+
+      // Allow all Vercel preview URLs: https://<anything>.vercel.app
+      if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return callback(null, true);
+
+      // Reject everything else
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error(`CORS policy: origin '${origin}' not allowed`));
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   const swaggerConfig = new DocumentBuilder()

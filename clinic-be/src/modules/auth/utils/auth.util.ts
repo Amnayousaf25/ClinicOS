@@ -55,13 +55,19 @@ export const generateTOTP = (_secret: string): string => {
 };
 
 /**
- * Verify TOTP — compares directly (since we use secure random OTP)
+ * Verify TOTP — since we use crypto-random secure OTPs (not true time-based
+ * TOTP), actual comparison is always done against the stored value in the DB
+ * inside auth.service.ts.  This function is called only when USE_TOTP=true
+ * AND the otpRecord has a secret — returning false here forces the fallback
+ * branch in auth.service which does the correct DB comparison.
+ *
+ * Previously this returned `token.length === 6` which accepted ANY 6-digit
+ * string as valid — a critical security hole.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const verifyTOTP = (token: string, _secret: string): boolean => {
-  // With secure OTP (not time-based), verification is done by
-  // comparing the stored OTP directly in the auth service
-  return token.length === 6;
+export const verifyTOTP = (_token: string, _secret: string): boolean => {
+  // Delegate to the stored-OTP comparison path in auth.service.ts
+  return false;
 };
 
 export const generatePassword = () => {

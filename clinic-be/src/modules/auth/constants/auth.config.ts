@@ -22,4 +22,4 @@ export const OTP_RESEND_COOLDOWN_SECONDS = 60; // Cooldown between OTP resend re
 
 // Feature Flags
 export const USE_REFRESH_TOKEN = true; // Set to true to use refresh token flow
-export const USE_TOTP = true; // Set to true to use TOTP, false for simple secure OTP
+export const USE_TOTP = false; // Set to false to use simple secure random OTP verified against DB

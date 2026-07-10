@@ -14,9 +14,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { LoginBrandPanel } from '@/components/login/LoginBrandPanel';
 import { ForgotPasswordDialog } from '@/components/login/ForgotPasswordDialog';
 
-const DEFAULT_LOGIN_EMAIL = 'tahir+a@geeksofkolachi.com';
-const DEFAULT_LOGIN_PASSWORD = 'Test1234$';
-
 const Login = () => {
   const [forgotOpen, setForgotOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -25,8 +22,8 @@ const Login = () => {
 
   const formik = useFormik({
     initialValues: {
-      email: DEFAULT_LOGIN_EMAIL,
-      password: DEFAULT_LOGIN_PASSWORD,
+      email: '',
+      password: '',
       rememberMe: false,
     },
     validationSchema: loginSchema,
