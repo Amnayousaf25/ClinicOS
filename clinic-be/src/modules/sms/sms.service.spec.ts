@@ -11,13 +11,16 @@ describe('SmsService', () => {
     schedule: jest.fn().mockResolvedValue({ success: true, sid: 'tel-sch-1' }),
     cancelScheduled: jest.fn(),
   };
+  const config = {
+    get: jest.fn().mockReturnValue(undefined),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   it('routes Pakistan local mobile numbers through LifetimeSMS as E.164', async () => {
-    const service = new SmsService(lifetime as any, telnyx as any);
+    const service = new SmsService(lifetime as any, telnyx as any, config as any);
 
     await service.sendSms('0300 1234567', 'hello');
 
@@ -26,7 +29,7 @@ describe('SmsService', () => {
   });
 
   it('routes Pakistan numbers without plus through LifetimeSMS', async () => {
-    const service = new SmsService(lifetime as any, telnyx as any);
+    const service = new SmsService(lifetime as any, telnyx as any, config as any);
 
     await service.sendSms('923001234567', 'hello');
 
@@ -35,7 +38,7 @@ describe('SmsService', () => {
   });
 
   it('normalizes 00-prefixed numbers before sending through Telnyx', async () => {
-    const service = new SmsService(lifetime as any, telnyx as any);
+    const service = new SmsService(lifetime as any, telnyx as any, config as any);
 
     await service.sendSms('0061400111222', 'hello');
 
@@ -46,6 +49,7 @@ describe('SmsService', () => {
     const service = new SmsService(
       { ...lifetime, isConfigured: false } as any,
       telnyx as any,
+      config as any,
     );
 
     const result = await service.sendSms('+923001234567', 'hello');
@@ -58,7 +62,7 @@ describe('SmsService', () => {
   });
 
   it('routes non-Pakistan numbers through Telnyx', async () => {
-    const service = new SmsService(lifetime as any, telnyx as any);
+    const service = new SmsService(lifetime as any, telnyx as any, config as any);
 
     await service.sendSms('61400111222', 'hello');
 
@@ -67,7 +71,7 @@ describe('SmsService', () => {
   });
 
   it('does not schedule Pakistan local mobile numbers through Telnyx', async () => {
-    const service = new SmsService(lifetime as any, telnyx as any);
+    const service = new SmsService(lifetime as any, telnyx as any, config as any);
     const sendAt = new Date(Date.now() + 10 * 60 * 1000);
 
     const result = await service.scheduleSms('03001234567', 'hello', sendAt);
