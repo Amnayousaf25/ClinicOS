@@ -30,6 +30,37 @@ export class ResendEmailService {
 
       if (response.error) {
         this.logger.error('Resend API error:', response.error);
+        
+        const isDomainUnverified =
+          response.error.message?.toLowerCase().includes('not verified') ||
+          response.error.statusCode === 403 ||
+          response.error.name === 'validation_error';
+        
+        if (isDomainUnverified && this.from !== 'onboarding@resend.dev') {
+          this.logger.warn(
+            `Retrying email send via Resend onboarding@resend.dev fallback due to unverified domain: ${this.from}`,
+          );
+          const fallbackPayload = { ...payload, from: 'onboarding@resend.dev' };
+          const fallbackResponse = await this.resend.emails.send(
+            fallbackPayload as any,
+          );
+          if (!fallbackResponse.error) {
+            this.logger.log(
+              `Email successfully sent using onboarding@resend.dev fallback.`,
+            );
+            return fallbackResponse;
+          } else {
+            this.logger.error(
+              'Resend fallback also failed:',
+              fallbackResponse.error,
+            );
+            throw new Error(
+              fallbackResponse.error.message ||
+                'Failed to send email via Resend fallback',
+            );
+          }
+        }
+
         throw new Error(response.error.message || 'Failed to send email via Resend');
       }
 

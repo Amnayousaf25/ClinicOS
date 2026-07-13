@@ -271,11 +271,17 @@ export class AuthService {
       name: user.name,
       email: user.email,
     });
-    await this.emailService.sendEmail(
-      user.email,
-      EMAIL_SUBJECT.FORGOT_PASSWORD_OTP,
-      template,
-    );
+    try {
+      await this.emailService.sendEmail(
+        user.email,
+        EMAIL_SUBJECT.FORGOT_PASSWORD_OTP,
+        template,
+      );
+    } catch (emailError: any) {
+      throw new BadRequestException(
+        `Failed to send OTP email: ${emailError.message || 'unknown error'}`,
+      );
+    }
 
     return { message: 'OTP has been sent to your email' };
   }
