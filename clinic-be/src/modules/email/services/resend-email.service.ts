@@ -22,7 +22,24 @@ export class ResendEmailService {
     bodyText?: string,
   ) {
     try {
-      const payload: Record<string, any> = { from: this.from, to, subject };
+      let targetRecipient = to;
+      let targetSubject = subject;
+
+      // In development mode, redirect all emails to the Resend account owner's email address
+      // to ensure physical email delivery succeeds through the sandbox onboarding@resend.dev domain.
+      if (process.env.NODE_ENV === 'dev' && to !== 'tahirgeeks@gmail.com') {
+        targetRecipient = 'tahirgeeks@gmail.com';
+        targetSubject = `[DEV Redirect for ${to}] ${subject}`;
+        this.logger.log(
+          `[DEV ONLY] Redirecting email from target ${to} to verified inbox tahirgeeks@gmail.com`,
+        );
+      }
+
+      const payload: Record<string, any> = {
+        from: this.from,
+        to: targetRecipient,
+        subject: targetSubject,
+      };
       if (bodyHtml) payload.html = bodyHtml;
       if (bodyText) payload.text = bodyText;
 

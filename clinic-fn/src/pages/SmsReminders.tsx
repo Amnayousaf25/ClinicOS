@@ -42,7 +42,7 @@ const SmsReminders = () => {
       {isLoading && <PageSpinner padding="sm" />}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-card rounded-2xl p-4 border border-border/50 card-3d">
           <div className="flex items-center gap-2 text-success"><CheckCircle2 className="w-4 h-4" /><p className="text-xs font-semibold">Sent</p></div>
           <p className="text-2xl font-bold text-foreground mt-1">{counts.sent}</p>

@@ -30,7 +30,7 @@ const Reports = () => {
         subtitle="Analytics & insights"
       />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-6 text-primary-foreground card-3d">
           <TrendingUp className="w-6 h-6 mb-3 opacity-80" />
           <p className="text-3xl font-bold">{realAppointments.length}</p>
