@@ -1,0 +1,8 @@
+{
+  "name": "clinicos-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd clinic-fn && npm install && npm run build && cd .. && mkdir -p dist && cp -R clinic-fn/dist/* dist/"
+  }
+}
