@@ -28,6 +28,11 @@ export class ResendEmailService {
 
       const response = await this.resend.emails.send(payload as any);
 
+      if (response.error) {
+        this.logger.error('Resend API error:', response.error);
+        throw new Error(response.error.message || 'Failed to send email via Resend');
+      }
+
       this.logger.log(`Email sent to ${to} successfully.`);
       return response;
     } catch (error: unknown) {

@@ -5,4 +5,5 @@ export enum ITemplates {
   WORKSPACE_SHARE = 'workspace-share',
   FORGOT_PASSWORD = 'forgot-password',
   BASE_SHARE = 'base-share',
+  APPOINTMENT_CONFIRMATION = 'appointment-confirmation',
 }

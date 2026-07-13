@@ -13,13 +13,21 @@ export class SendgridEmailService {
       CONFIG.EMAIL_CLIENT_API_KEY,
       '',
     );
-    if (!sendGridApiKey) {
-      throw new Error('SendGrid API key is not set');
+    if (sendGridApiKey) {
+      sgMail.setApiKey(sendGridApiKey);
+    } else {
+      this.logger.warn('SendGrid API key is not set. SendgridEmailService will not be active.');
     }
-    sgMail.setApiKey(sendGridApiKey);
   }
 
   async sendEmail(email: SendEmailWithHtmlDto) {
+    const sendGridApiKey = this.configService.get<string>(
+      CONFIG.EMAIL_CLIENT_API_KEY,
+      '',
+    );
+    if (!sendGridApiKey) {
+      throw new Error('SendGrid API key is not set');
+    }
     const msg = {
       to: email.to,
       from: this.configService.get<string>(CONFIG.EMAIL_SENDER, ''), // Replace with your verified sender email

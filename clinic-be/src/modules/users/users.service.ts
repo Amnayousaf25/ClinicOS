@@ -197,10 +197,14 @@ export class UsersService implements OnModuleInit {
 
     try {
       await this.emailService.sendEmail(dto.email, 'ClinicOS invitation', html);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to send invitation email to ${dto.email}`,
         error,
+      );
+      await this.userModel.deleteOne({ _id: user._id });
+      throw new BadRequestException(
+        `Failed to send invitation email: ${error.message || 'unknown error'}`,
       );
     }
 

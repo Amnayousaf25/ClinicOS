@@ -9,6 +9,8 @@ import {
 } from 'src/modules/appointments/schemas/appointment.schema';
 import { ClinicSettingsService } from 'src/modules/clinic-settings/clinic-settings.service';
 import { SmsService } from 'src/modules/sms/sms.service';
+import { EmailService } from 'src/modules/email/services/email-service';
+import { ITemplates } from 'src/modules/email/types/templates.type';
 import { UpdateReminderConfigDto } from './dto/update-config.dto';
 import {
   ReminderConfig,
@@ -80,6 +82,7 @@ export class RemindersService {
     private appointmentModel: Model<AppointmentDocument>,
     private settingsService: ClinicSettingsService,
     private smsService: SmsService,
+    private emailService: EmailService,
   ) {}
 
   // ─── Config CRUD ─────────────────────────────────────────────────────────
@@ -266,6 +269,37 @@ export class RemindersService {
     if (result.success) {
       await this.incReminderCount(apt);
     }
+
+    if (id1.email) {
+      try {
+        const serviceName = (apt.serviceId as any)?.name || 'Service';
+        const clinicName = settings.clinicName || 'ClinicOS';
+        const html = this.emailService.loadTemplate(
+          ITemplates.APPOINTMENT_CONFIRMATION,
+          {
+            name: id1.name,
+            service: serviceName,
+            date: apt.date,
+            time: apt.time,
+            clinicName,
+            email: id1.email,
+          },
+        );
+        await this.emailService.sendEmail(
+          id1.email,
+          `Appointment Confirmation - ${serviceName}`,
+          html,
+        );
+        this.logger.log(
+          `Appointment confirmation email sent to ${id1.email} successfully.`,
+        );
+      } catch (emailError: any) {
+        this.logger.error(
+          `Failed to send appointment confirmation email to ${id1.email}:`,
+          emailError,
+        );
+      }
+    }
     await this.appointmentModel.updateOne(
       { _id: apt._id, 'smsReminders.type': 'confirmation' },
       { $set: { 'smsReminders.$.sent': result.success } },
@@ -278,7 +312,8 @@ export class RemindersService {
         _id: appointmentId,
         orgId: new Types.ObjectId(orgId),
       })
-      .populate('patientId', '_id name phone email mrn');
+      .populate('patientId', '_id name phone email mrn')
+      .populate('serviceId', '_id name');
     if (!apt) throw new NotFoundException('Appointment not found');
 
     const config = await this.getConfig(
@@ -324,6 +359,37 @@ export class RemindersService {
     );
     if (result.success) {
       await this.incReminderCount(apt);
+    }
+
+    if (id2.email) {
+      try {
+        const serviceName = (apt.serviceId as any)?.name || 'Service';
+        const clinicName = settings.clinicName || 'ClinicOS';
+        const html = this.emailService.loadTemplate(
+          ITemplates.APPOINTMENT_CONFIRMATION,
+          {
+            name: id2.name,
+            service: serviceName,
+            date: apt.date,
+            time: apt.time,
+            clinicName,
+            email: id2.email,
+          },
+        );
+        await this.emailService.sendEmail(
+          id2.email,
+          `Appointment Confirmation - ${serviceName}`,
+          html,
+        );
+        this.logger.log(
+          `Appointment confirmation email sent to ${id2.email} successfully.`,
+        );
+      } catch (emailError: any) {
+        this.logger.error(
+          `Failed to send appointment confirmation email to ${id2.email}:`,
+          emailError,
+        );
+      }
     }
     await this.appointmentModel.updateOne(
       { _id: apt._id, 'smsReminders.type': 'confirmation' },

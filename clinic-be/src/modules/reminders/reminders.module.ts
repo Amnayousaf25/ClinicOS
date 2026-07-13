@@ -14,6 +14,7 @@ import { RemindersService } from './reminders.service';
 import { RemindersScheduler } from './reminders.scheduler';
 import { ClinicSettingsModule } from 'src/modules/clinic-settings/clinic-settings.module';
 import { SmsModule } from 'src/modules/sms/sms.module';
+import { EmailModule } from 'src/modules/email/email.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SmsModule } from 'src/modules/sms/sms.module';
     ]),
     ClinicSettingsModule,
     SmsModule,
+    EmailModule,
   ],
   controllers: [RemindersController],
   providers: [RemindersService, RemindersScheduler],

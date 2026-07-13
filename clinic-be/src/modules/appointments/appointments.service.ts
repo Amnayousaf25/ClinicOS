@@ -335,6 +335,13 @@ export class AppointmentsService {
       changedBy: ctx.changedBy,
     });
 
+    // Send confirmation email + SMS on reconfirmation
+    try {
+      await this.remindersService.sendBookingConfirmation(saved);
+    } catch {
+      /* non-blocking */
+    }
+
     return saved;
   }
 
