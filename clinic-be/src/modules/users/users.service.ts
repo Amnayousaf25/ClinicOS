@@ -165,6 +165,18 @@ export class UsersService implements OnModuleInit {
       deletedAt: null,
     });
     if (existing) throw new BadRequestException('Email already registered');
+
+    if (dto.employeeId) {
+      const existingEmployee = await this.userModel.findOne({
+        orgId,
+        employeeId: dto.employeeId,
+        deletedAt: null,
+      });
+      if (existingEmployee) {
+        throw new BadRequestException('Employee ID is already in use');
+      }
+    }
+
     const token = crypto.randomBytes(32).toString('hex');
     const user = await this.userModel.create({
       ...dto,
