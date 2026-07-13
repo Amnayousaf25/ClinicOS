@@ -7,6 +7,7 @@ import {
   HttpException,
   HttpStatus,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -55,6 +56,7 @@ const PASSWORD_SALT_ROUNDS = 10;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
@@ -278,6 +280,12 @@ export class AuthService {
         template,
       );
     } catch (emailError: any) {
+      if (process.env.NODE_ENV === 'dev') {
+        this.logger.warn(
+          `[DEV ONLY] Failed to send OTP email to ${user.email} (${emailError.message}). Bypassing failure. OTP code is: ${otp}`,
+        );
+        return { message: `[DEV ONLY] OTP logged to server console. Code: ${otp}` };
+      }
       throw new BadRequestException(
         `Failed to send OTP email: ${emailError.message || 'unknown error'}`,
       );

@@ -202,6 +202,12 @@ export class UsersService implements OnModuleInit {
         `Failed to send invitation email to ${dto.email}`,
         error,
       );
+      if (process.env.NODE_ENV === 'dev') {
+        this.logger.warn(
+          `[DEV ONLY] Bypassing invitation email failure. Invitation token is: ${token}`,
+        );
+        return { userId: user._id, invitationToken: token };
+      }
       await this.userModel.deleteOne({ _id: user._id });
       throw new BadRequestException(
         `Failed to send invitation email: ${error.message || 'unknown error'}`,
