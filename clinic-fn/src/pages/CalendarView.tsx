@@ -17,7 +17,7 @@ const CalendarView = () => {
   const workingHours = settings?.workingHours ?? { start: '08:00', end: '17:00' };
   const slotDuration = settings?.slotDuration ?? 30;
 
-  const days = Array.from({ length: 5 }, (_, i) => weekStart.add(i, 'day'));
+  const days = Array.from({ length: 7 }, (_, i) => weekStart.add(i, 'day'));
   const [startH] = workingHours.start.split(':').map(Number);
   const [endH] = workingHours.end.split(':').map(Number);
   const hours = Array.from({ length: endH - startH }, (_, i) => startH + i);
@@ -34,7 +34,7 @@ const CalendarView = () => {
       <PageHeader
         icon={CalendarDays}
         title="Calendar"
-        subtitle={`${weekStart.format('MMM D')} — ${weekStart.add(4, 'day').format('MMM D, YYYY')}`}
+        subtitle={`${weekStart.format('MMM D')} — ${weekStart.add(6, 'day').format('MMM D, YYYY')}`}
         actions={
           <>
             <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" onClick={() => setWeekStart((w) => w.subtract(7, 'day'))}>

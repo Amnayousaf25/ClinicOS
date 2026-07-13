@@ -45,16 +45,6 @@ export class SmsService {
     this.logger.log(`SMS to ${masked} (len=${body.length})`);
 
     const isDev = process.env.NODE_ENV === 'dev';
-    const whatsappApiKey = this.config.get<string>('WHATSAPP_API_KEY');
-    const whatsappPhone = this.config.get<string>('WHATSAPP_PHONE');
-
-    if (isDev && whatsappApiKey && whatsappPhone) {
-      this.logger.log(`[DEV ONLY] Routing SMS to WhatsApp via CallMeBot...`);
-      const result = await this.sendWhatsAppCallMeBot(
-        `[SMS for ${to}] ${body}`,
-      );
-      if (result.success) return result;
-    }
 
     try {
       if (this.isPakistan(normalizedTo)) {
@@ -128,16 +118,6 @@ export class SmsService {
     const masked = this.maskPhone(normalizedTo);
 
     const isDev = process.env.NODE_ENV === 'dev';
-    const whatsappApiKey = this.config.get<string>('WHATSAPP_API_KEY');
-    const whatsappPhone = this.config.get<string>('WHATSAPP_PHONE');
-
-    if (isDev && whatsappApiKey && whatsappPhone) {
-      this.logger.log(`[DEV ONLY] Routing Scheduled SMS to WhatsApp via CallMeBot...`);
-      await this.sendWhatsAppCallMeBot(
-        `[SCHEDULED for ${sendAt.toISOString()} to ${to}] ${body}`,
-      );
-      return { success: true, scheduled: true, sid: 'callmebot-wa-scheduled' };
-    }
 
     // Telnyx constraint: 5 min – 5 days from now
     const now = Date.now();
@@ -237,25 +217,4 @@ export class SmsService {
     return this.telnyx.cancelScheduled(messageId);
   }
 
-  private async sendWhatsAppCallMeBot(body: string): Promise<SmsResult> {
-    const phone = this.config.get<string>('WHATSAPP_PHONE') || '';
-    const apikey = this.config.get<string>('WHATSAPP_API_KEY') || '';
-    if (!phone || !apikey) return { success: false, error: 'whatsapp_not_configured' };
-
-    const normalizedPhone = phone.replace(/^\+/, '').replace(/\s+/g, '');
-    try {
-      const encodedText = encodeURIComponent(body);
-      const url = `https://api.callmebot.com/whatsapp.php?phone=${normalizedPhone}&text=${encodedText}&apikey=${apikey}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        this.logger.log(`WhatsApp message sent successfully via CallMeBot to ${normalizedPhone}`);
-        return { success: true, sid: 'callmebot-wa' };
-      }
-      const errText = await res.text();
-      throw new Error(`CallMeBot returned ${res.status}: ${errText}`);
-    } catch (err: any) {
-      this.logger.error('Failed to send WhatsApp message:', err);
-      return { success: false, error: err.message };
-    }
-  }
 }

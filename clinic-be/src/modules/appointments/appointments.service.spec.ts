@@ -34,6 +34,8 @@ describe('AppointmentsService', () => {
     scheduleReminders: jest.fn(),
     cancelReminders: jest.fn(),
     sendManualBookingConfirmation: jest.fn(),
+    sendRescheduleNotification: jest.fn(),
+    sendCancellationNotification: jest.fn(),
   };
 
   const mockPatientsService = {

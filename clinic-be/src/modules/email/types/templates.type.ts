@@ -6,4 +6,6 @@ export enum ITemplates {
   FORGOT_PASSWORD = 'forgot-password',
   BASE_SHARE = 'base-share',
   APPOINTMENT_CONFIRMATION = 'appointment-confirmation',
+  APPOINTMENT_RESCHEDULED = 'appointment-rescheduled',
+  APPOINTMENT_CANCELLED = 'appointment-cancelled',
 }

@@ -25,15 +25,7 @@ export class ResendEmailService {
       let targetRecipient = to;
       let targetSubject = subject;
 
-      // In development mode, redirect all emails to the Resend account owner's email address
-      // to ensure physical email delivery succeeds through the sandbox onboarding@resend.dev domain.
-      if (process.env.NODE_ENV === 'dev' && to !== 'tahirgeeks@gmail.com') {
-        targetRecipient = 'tahirgeeks@gmail.com';
-        targetSubject = `[DEV Redirect for ${to}] ${subject}`;
-        this.logger.log(
-          `[DEV ONLY] Redirecting email from target ${to} to verified inbox tahirgeeks@gmail.com`,
-        );
-      }
+      // Send directly to the target recipient (no redirect in dev mode)
 
       const payload: Record<string, any> = {
         from: this.from,

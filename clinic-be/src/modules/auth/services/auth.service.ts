@@ -2,7 +2,7 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import { HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 
 import { SerializeHttpResponse } from 'src/utils/serializer';
 import { ITemplates } from 'src/modules/email/types/templates.type';
@@ -42,6 +42,8 @@ import { AuthenticatedPayload } from '../types/request';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly jwtService: JwtService,
@@ -243,6 +245,12 @@ export class AuthService {
     );
 
     const subject = 'Forgot Password';
+    
+    const isDev = this.configService.get<string>('NODE_ENV') === 'dev';
+    if (isDev) {
+      this.logger.log(`[DEV ONLY] Forgot Password link for ${data.email}: ${emailData.url}/reset-password?token=${token}`);
+    }
+
     await this.emailService.sendEmail(data.email, subject, template);
 
     return SerializeHttpResponse(

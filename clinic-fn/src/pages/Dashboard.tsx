@@ -92,7 +92,6 @@ const Dashboard = () => {
           appointments={filtered}
           showDate={range !== 'today'}
           showProvider
-          showReminders
           providerName={providerName}
         />
       </div>

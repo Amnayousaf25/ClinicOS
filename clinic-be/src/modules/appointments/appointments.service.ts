@@ -302,8 +302,9 @@ export class AppointmentsService {
       changedBy: ctx.changedBy,
     });
 
-    // Schedule new reminders for the new time
+    // Schedule new reminders for the new time + send rescheduled notification
     try {
+      await this.remindersService.sendRescheduleNotification(saved);
       await this.remindersService.scheduleReminders(saved);
     } catch {
       /* non-critical */
@@ -377,6 +378,12 @@ export class AppointmentsService {
       actor: ctx.actor ?? AppointmentHistoryActor.Staff,
       changedBy: ctx.changedBy,
     });
+
+    try {
+      await this.remindersService.sendCancellationNotification(saved);
+    } catch {
+      /* non-critical */
+    }
 
     return saved;
   }

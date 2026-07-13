@@ -57,39 +57,10 @@ const SmsReminders = () => {
         </div>
       </div>
 
-      {/* Reminder Configs */}
-      {reminderConfigs.length > 0 && (
-        <div className="bg-card rounded-2xl p-6 card-3d border border-border/50 space-y-4">
-          <div>
-            <h2 className="font-semibold text-foreground">Message Templates</h2>
-            <p className="text-xs text-muted-foreground mt-1">Use <code className="bg-muted px-1 rounded">{'{name}'}</code>, <code className="bg-muted px-1 rounded">{'{date}'}</code>, <code className="bg-muted px-1 rounded">{'{time}'}</code>, <code className="bg-muted px-1 rounded">{'{clinic}'}</code>, <code className="bg-muted px-1 rounded">{'{link}'}</code></p>
-          </div>
-          {reminderConfigs.map((config) => (
-            <div key={config._id} className="space-y-2 p-4 rounded-xl bg-muted/30 border border-border/50">
-              <div className="flex items-center justify-between">
-                <Label className="font-semibold">{config.label || config.type}</Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">{config.enabled ? 'Enabled' : 'Disabled'}</span>
-                  <Switch
-                    checked={config.enabled}
-                    onCheckedChange={(v) => updateConfigMut.mutate({ id: config._id, update: { enabled: v } })}
-                  />
-                </div>
-              </div>
-              <textarea
-                className="w-full rounded-xl border border-input bg-background px-3 py-2 text-sm text-foreground resize-none h-20"
-                value={config.message || ''}
-                onChange={(e) => updateConfigMut.mutate({ id: config._id, update: { message: e.target.value } })}
-                disabled={!config.enabled}
-              />
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Log */}
       <div className="bg-card rounded-2xl card-3d border border-border/50 overflow-hidden">
-        <div className="p-5 border-b border-border flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="font-semibold text-foreground">Message Log</h2>
           <div className="flex gap-1 bg-muted rounded-lg p-1">
             {(['all', 'sent', 'scheduled'] as const).map((f) => (

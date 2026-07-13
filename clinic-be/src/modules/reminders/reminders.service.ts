@@ -398,6 +398,124 @@ export class RemindersService {
     return (await this.appointmentModel.findById(apt._id)) || apt;
   }
 
+  async sendRescheduleNotification(apt: AppointmentDocument) {
+    const settings = await this.settingsService.getOrCreate(apt.orgId);
+    const clinicName = settings.clinicName || 'the clinic';
+    const id1 = patientIdentity(apt);
+    const body = `Hi ${id1.name}, your appointment at ${clinicName} has been rescheduled to ${apt.date} at ${apt.time}.`;
+    
+    const result = await this.smsService.sendSms(id1.phone, body);
+    
+    await this.logModel.updateOne(
+      {
+        orgId: apt.orgId,
+        appointmentId: apt._id,
+        messageType: 'reschedule_notification',
+      },
+      {
+        $set: {
+          patientName: id1.name,
+          phone: id1.phone,
+          sentAt: new Date(),
+          status: result.success ? ReminderLogStatus.Delivered : ReminderLogStatus.Failed,
+          messageBody: body,
+          messageId: result.sid || null,
+          errorMessage: result.error || null,
+        },
+        $setOnInsert: {
+          orgId: apt.orgId,
+          appointmentId: apt._id,
+          messageType: 'reschedule_notification',
+        }
+      },
+      { upsert: true }
+    );
+
+    if (id1.email) {
+      try {
+        const serviceName = (apt.serviceId as any)?.name || 'Service';
+        const html = this.emailService.loadTemplate(
+          ITemplates.APPOINTMENT_RESCHEDULED,
+          {
+            name: id1.name,
+            service: serviceName,
+            date: apt.date,
+            time: apt.time,
+            clinicName,
+            email: id1.email,
+          },
+        );
+        await this.emailService.sendEmail(
+          id1.email,
+          `Appointment Rescheduled - ${serviceName}`,
+          html,
+        );
+        this.logger.log(`Appointment rescheduled email sent to ${id1.email} successfully.`);
+      } catch (emailError: any) {
+        this.logger.error(`Failed to send appointment rescheduled email to ${id1.email}:`, emailError);
+      }
+    }
+  }
+
+  async sendCancellationNotification(apt: AppointmentDocument) {
+    const settings = await this.settingsService.getOrCreate(apt.orgId);
+    const clinicName = settings.clinicName || 'the clinic';
+    const id1 = patientIdentity(apt);
+    const body = `Hi ${id1.name}, your appointment at ${clinicName} on ${apt.date} at ${apt.time} has been cancelled.`;
+    
+    const result = await this.smsService.sendSms(id1.phone, body);
+    
+    await this.logModel.updateOne(
+      {
+        orgId: apt.orgId,
+        appointmentId: apt._id,
+        messageType: 'cancellation_notification',
+      },
+      {
+        $set: {
+          patientName: id1.name,
+          phone: id1.phone,
+          sentAt: new Date(),
+          status: result.success ? ReminderLogStatus.Delivered : ReminderLogStatus.Failed,
+          messageBody: body,
+          messageId: result.sid || null,
+          errorMessage: result.error || null,
+        },
+        $setOnInsert: {
+          orgId: apt.orgId,
+          appointmentId: apt._id,
+          messageType: 'cancellation_notification',
+        }
+      },
+      { upsert: true }
+    );
+
+    if (id1.email) {
+      try {
+        const serviceName = (apt.serviceId as any)?.name || 'Service';
+        const html = this.emailService.loadTemplate(
+          ITemplates.APPOINTMENT_CANCELLED,
+          {
+            name: id1.name,
+            service: serviceName,
+            date: apt.date,
+            time: apt.time,
+            clinicName,
+            email: id1.email,
+          },
+        );
+        await this.emailService.sendEmail(
+          id1.email,
+          `Appointment Cancelled - ${serviceName}`,
+          html,
+        );
+        this.logger.log(`Appointment cancelled email sent to ${id1.email} successfully.`);
+      } catch (emailError: any) {
+        this.logger.error(`Failed to send appointment cancelled email to ${id1.email}:`, emailError);
+      }
+    }
+  }
+
   // ─── Schedule 24h & 2h reminders (called on create / reschedule) ─────────
 
   async scheduleReminders(apt: AppointmentDocument) {

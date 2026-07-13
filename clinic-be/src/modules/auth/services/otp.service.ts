@@ -2,7 +2,7 @@ import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 
 import { SerializeHttpResponse } from 'src/utils/serializer';
 
@@ -37,6 +37,8 @@ import { OtpDto } from '../dto/otp.dto';
 
 @Injectable()
 export class OtpService {
+  private readonly logger = new Logger(OtpService.name);
+
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Otp.name) private readonly otpModel: Model<Otp>,
@@ -118,6 +120,11 @@ export class OtpService {
     // Send OTP via email
     const emailData = { otp, name: user.name, email: user.email };
     const template = this.emailService.loadTemplate(ITemplates.OTP, emailData);
+
+    const isDev = this.configService.get<string>('NODE_ENV') === 'dev';
+    if (isDev) {
+      this.logger.log(`[DEV ONLY] Generated OTP for ${user.email}: ${otp}`);
+    }
 
     await this.emailService.sendEmail(user.email, subject, template);
     return SerializeHttpResponse(true, HttpStatus.OK, OTP_SUCCESS.GENERATE_OTP);

@@ -65,11 +65,13 @@
     "passport": "latest",
     "passport-jwt": "latest",
     "passport-local": "latest",
+    "qrcode-terminal": "^0.12.0",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.12.0",
     "rxjs": "^7.8.1",
     "socket.io": "latest",
-    "string-width": "4.2.3"
+    "string-width": "4.2.3",
+    "whatsapp-web.js": "^1.34.7"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.6.3",

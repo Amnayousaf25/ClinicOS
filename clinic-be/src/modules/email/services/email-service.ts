@@ -33,29 +33,43 @@ export class EmailService {
     bodyHtml = '',
     bodyText?: string,
   ) {
+    const host = this.configService.get<string>('MAIL_HOST');
+    const user = this.configService.get<string>('MAIL_USER');
+    const pass = this.configService.get<string>('MAIL_PASSWORD');
+
+    const isPlaceholder =
+      !user ||
+      user === 'your_email@gmail.com' ||
+      !pass ||
+      pass === 'your_app_password';
+
+    if (isPlaceholder) {
+      this.logger.warn(
+        `[EMAIL NOT SENT] Placeholder SMTP credentials detected (MAIL_USER=${user}). Please configure actual credentials in .env.dev to receive actual emails!`,
+      );
+      const isDev = this.configService.get<string>('NODE_ENV') === 'dev';
+      if (isDev) {
+        return { success: true, dryRun: true };
+      }
+      throw new Error('SMTP credentials are not configured.');
+    }
+
     const provider = this.configService.get<string>('EMAIL_PROVIDER') || 'resend';
-    
-    // Auto-detect SMTP: if MAIL_HOST is defined, default to SMTP unless explicitly configured otherwise
-    const hasSmtp = !!this.configService.get<string>('MAIL_HOST');
+    const hasSmtp = !!host;
     const activeProvider = hasSmtp ? 'smtp' : provider.toLowerCase();
 
     this.logger.log(`Attempting to send email via active provider: ${activeProvider}`);
 
-    try {
-      if (activeProvider === 'smtp') {
-        await this.smtpEmailService.sendEmail(to, subject, bodyHtml, bodyText);
-      } else if (activeProvider === 'resend') {
-        await this.resendEmailService.sendEmail(to, subject, bodyHtml, bodyText);
-      } else if (activeProvider === 'sendgrid') {
-        await this.sendgridEmailService.sendEmail({ to, subject, html: bodyHtml });
-      } else if (activeProvider === 'ses') {
-        await this.sesMailService.sendEmail(to, subject, bodyHtml, bodyText);
-      } else {
-        throw new Error(`Unsupported email provider: ${activeProvider}`);
-      }
-    } catch (error) {
-      this.logger.error(`Failed to send email to ${to} using ${activeProvider}:`, error);
-      throw error;
+    if (activeProvider === 'smtp') {
+      await this.smtpEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+    } else if (activeProvider === 'resend') {
+      await this.resendEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+    } else if (activeProvider === 'sendgrid') {
+      await this.sendgridEmailService.sendEmail({ to, subject, html: bodyHtml });
+    } else if (activeProvider === 'ses') {
+      await this.sesMailService.sendEmail(to, subject, bodyHtml, bodyText);
+    } else {
+      throw new Error(`Unsupported email provider: ${activeProvider}`);
     }
   }
 }
