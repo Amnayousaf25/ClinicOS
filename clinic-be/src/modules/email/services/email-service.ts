@@ -5,6 +5,7 @@ import * as Handlebars from 'handlebars';
 import { ConfigService } from '@nestjs/config';
 import { SmtpEmailService } from './smtp-email.service';
 import { ResendEmailService } from './resend-email.service';
+import { BrevoEmailService } from './brevo-email.service';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -14,6 +15,7 @@ export class EmailService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly smtpEmailService: SmtpEmailService,
     private readonly resendEmailService: ResendEmailService,
+    private readonly brevoEmailService: BrevoEmailService,
   ) {}
 
   onModuleInit() {
@@ -26,9 +28,10 @@ export class EmailService implements OnModuleInit {
     const resendApiKey =
       this.configService.get<string>('EMAIL_API_KEY') ||
       this.configService.get<string>('Email_API_KEY');
+    const brevoApiKey = this.configService.get<string>('BREVO_API_KEY');
 
     this.logger.log(
-      `[EmailService Diagnostic] SMTP User present: ${!!smtpUser}, Resend API Key present: ${!!resendApiKey}`,
+      `[EmailService Diagnostic] SMTP User present: ${!!smtpUser}, Resend API Key present: ${!!resendApiKey}, Brevo API Key present: ${!!brevoApiKey}`,
     );
   }
 
@@ -49,13 +52,38 @@ export class EmailService implements OnModuleInit {
     const isProduction = nodeEnv === 'production' || nodeEnv === 'prod';
 
     if (isProduction) {
-      this.logger.log(`[EmailService] Production mode. Routing via Resend API to: ${to}`);
-      try {
-        const result = await this.resendEmailService.sendEmail(to, subject, bodyHtml, bodyText);
-        return result;
-      } catch (error: any) {
-        this.logger.error(`[EmailService] Resend API error sending email to ${to}:`, error);
-        throw error;
+      const brevoApiKey = this.configService.get<string>('BREVO_API_KEY');
+      const resendApiKey =
+        this.configService.get<string>('EMAIL_API_KEY') ||
+        this.configService.get<string>('Email_API_KEY');
+
+      if (brevoApiKey) {
+        this.logger.log(`[EmailService] Production mode. Routing via Brevo HTTP API to: ${to}`);
+        try {
+          const result = await this.brevoEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+          return result;
+        } catch (error: any) {
+          this.logger.error(`[EmailService] Brevo HTTP API error sending email to ${to}:`, error);
+          throw error;
+        }
+      } else if (resendApiKey) {
+        this.logger.log(`[EmailService] Production mode. Routing via Resend API to: ${to}`);
+        try {
+          const result = await this.resendEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+          return result;
+        } catch (error: any) {
+          this.logger.error(`[EmailService] Resend API error sending email to ${to}:`, error);
+          throw error;
+        }
+      } else {
+        this.logger.log(`[EmailService] Production mode fallback. Routing via SMTP to: ${to}`);
+        try {
+          const result = await this.smtpEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+          return result;
+        } catch (error: any) {
+          this.logger.error(`[EmailService] SMTP fallback error sending email to ${to}:`, error);
+          throw error;
+        }
       }
     } else {
       this.logger.log(`[EmailService] Development mode. Routing via SMTP to: ${to}`);
