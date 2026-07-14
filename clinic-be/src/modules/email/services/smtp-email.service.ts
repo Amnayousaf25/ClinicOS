@@ -48,7 +48,8 @@ export class SmtpEmailService {
           user,
           pass,
         },
-      });
+        family: 4, // Force IPv4 to resolve production network routing failures
+      } as nodemailer.TransportOptions);
       this.logger.log(
         `SMTP Mail transporter initialized (host: ${host}, port: ${port}, secure: ${secure})`,
       );
