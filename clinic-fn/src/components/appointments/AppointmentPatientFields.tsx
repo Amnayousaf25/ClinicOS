@@ -130,7 +130,14 @@ export const AppointmentPatientFields = ({
               // Auto-refresh the doctor list: if current provider isn't assigned to this service, clear it.
               const matchedProvider = providers.find(p => p._id === formik.values.providerId);
               const pServiceId = matchedProvider ? (typeof matchedProvider.serviceId === 'object' && matchedProvider.serviceId ? matchedProvider.serviceId._id : matchedProvider.serviceId) : null;
-              if (serviceIdValue && pServiceId !== serviceIdValue) {
+              
+              const isConsultation = (() => {
+                if (!serviceIdValue) return false;
+                const s = services.find(srv => srv._id === serviceIdValue);
+                return s && s.name.toLowerCase() === 'consultation';
+              })();
+
+              if (serviceIdValue && !isConsultation && pServiceId !== serviceIdValue) {
                 formik.setFieldValue('providerId', '');
               }
             }}
@@ -155,6 +162,10 @@ export const AppointmentPatientFields = ({
             const selectedServiceId = formik.values.serviceId;
             const filteredProviders = providers.filter((p) => {
               if (!selectedServiceId || selectedServiceId === '') return true;
+              const selectedService = services.find(s => s._id === selectedServiceId);
+              if (selectedService && selectedService.name.toLowerCase() === 'consultation') {
+                return true;
+              }
               const pServiceId = typeof p.serviceId === 'object' && p.serviceId ? p.serviceId._id : p.serviceId;
               return pServiceId === selectedServiceId;
             });
