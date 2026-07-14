@@ -9,13 +9,14 @@ export class LifetimeService {
   private readonly apiToken: string | undefined;
   private readonly apiSecret: string | undefined;
   private readonly apiUrl = 'https://lifetimesms.com/json';
-  private readonly sender = 'SMS Alert';
+  private readonly sender: string;
 
   readonly isConfigured: boolean;
 
   constructor(private config: ConfigService) {
     this.apiToken = this.config.get<string>('LIFE_TIME_API_TOKEN');
     this.apiSecret = this.config.get<string>('LIFE_TIME_API_SECRET');
+    this.sender = this.config.get<string>('LIFE_TIME_FROM') || 'SMS Alert';
     this.isConfigured = !!(this.apiToken && this.apiSecret);
 
     if (this.isConfigured) {

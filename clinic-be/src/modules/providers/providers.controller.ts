@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ProvidersService } from './providers.service';
@@ -28,10 +29,13 @@ export class ProvidersController {
 
   @Get()
   @Permissions(PERMISSIONS.APPOINTMENTS_READ)
-  async findAll(@OrgId() orgId: string) {
+  async findAll(
+    @OrgId() orgId: string,
+    @Query('serviceId') serviceId?: string,
+  ) {
     return {
       message: 'Providers fetched successfully',
-      data: await this.providersService.findAllByOrg(orgId),
+      data: await this.providersService.findAllByOrg(orgId, serviceId),
     };
   }
 

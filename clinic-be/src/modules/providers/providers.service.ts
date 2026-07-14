@@ -18,9 +18,15 @@ export class ProvidersService {
     private providerModel: Model<ProviderDocument>,
   ) {}
 
-  async findAllByOrg(orgId: string): Promise<ProviderDocument[]> {
+  async findAllByOrg(orgId: string, serviceId?: string): Promise<ProviderDocument[]> {
+    const filter: any = { orgId: new Types.ObjectId(orgId) };
+    if (serviceId && serviceId !== 'all') {
+      if (Types.ObjectId.isValid(serviceId)) {
+        filter.serviceId = new Types.ObjectId(serviceId);
+      }
+    }
     return this.providerModel
-      .find({ orgId: new Types.ObjectId(orgId) })
+      .find(filter)
       .populate('serviceId', 'name')
       .sort({ name: 1 })
       .exec();

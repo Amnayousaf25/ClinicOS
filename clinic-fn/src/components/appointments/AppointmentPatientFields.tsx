@@ -123,13 +123,14 @@ export const AppointmentPatientFields = ({
         <div className="space-y-1.5">
           <Label>Service *</Label>
           <Select
-            value={formik.values.serviceId}
+            value={formik.values.serviceId || '__all__'}
             onValueChange={(val) => {
-              formik.setFieldValue('serviceId', val);
+              const serviceIdValue = val === '__all__' ? '' : val;
+              formik.setFieldValue('serviceId', serviceIdValue);
               // Auto-refresh the doctor list: if current provider isn't assigned to this service, clear it.
               const matchedProvider = providers.find(p => p._id === formik.values.providerId);
               const pServiceId = matchedProvider ? (typeof matchedProvider.serviceId === 'object' && matchedProvider.serviceId ? matchedProvider.serviceId._id : matchedProvider.serviceId) : null;
-              if (pServiceId !== val) {
+              if (serviceIdValue && pServiceId !== serviceIdValue) {
                 formik.setFieldValue('providerId', '');
               }
             }}
@@ -138,6 +139,7 @@ export const AppointmentPatientFields = ({
               <SelectValue placeholder="Select service" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__all__">All Services</SelectItem>
               {services.filter((s) => !s.name.toLowerCase().includes('follow-up')).map((s) => (
                 <SelectItem key={s._id} value={s._id}>
                   {s.name} ({s.duration}m · ${s.price})
@@ -152,7 +154,7 @@ export const AppointmentPatientFields = ({
           {(() => {
             const selectedServiceId = formik.values.serviceId;
             const filteredProviders = providers.filter((p) => {
-              if (!selectedServiceId) return false;
+              if (!selectedServiceId || selectedServiceId === '') return true;
               const pServiceId = typeof p.serviceId === 'object' && p.serviceId ? p.serviceId._id : p.serviceId;
               return pServiceId === selectedServiceId;
             });
@@ -160,7 +162,7 @@ export const AppointmentPatientFields = ({
             return (
               <Select
                 value={formik.values.providerId || '__none__'}
-                disabled={!selectedServiceId || filteredProviders.length === 0}
+                disabled={filteredProviders.length === 0}
                 onValueChange={(val) =>
                   formik.setFieldValue(
                     'providerId',
@@ -171,9 +173,7 @@ export const AppointmentPatientFields = ({
                 <SelectTrigger className="rounded-xl">
                   <SelectValue
                     placeholder={
-                      !selectedServiceId
-                        ? 'Select service first'
-                        : filteredProviders.length === 0
+                      filteredProviders.length === 0
                         ? 'No doctors available'
                         : 'Select provider'
                     }
@@ -189,9 +189,9 @@ export const AppointmentPatientFields = ({
                       {p.title ? ` — ${p.title}` : ''}
                     </SelectItem>
                   ))}
-                  {selectedServiceId && filteredProviders.length === 0 && (
+                  {filteredProviders.length === 0 && (
                     <SelectItem value="__none__" disabled>
-                      No doctors in this department
+                      No doctors available
                     </SelectItem>
                   )}
                 </SelectContent>

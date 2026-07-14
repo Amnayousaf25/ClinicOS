@@ -7,6 +7,7 @@ export class TelnyxService {
   private readonly logger = new Logger(TelnyxService.name);
   private readonly apiKey: string | undefined;
   private readonly profileId: string | undefined;
+  private readonly fromNumber: string | undefined;
   private readonly apiUrl = 'https://api.telnyx.com/v2/messages';
 
   readonly isConfigured: boolean;
@@ -14,6 +15,7 @@ export class TelnyxService {
   constructor(private config: ConfigService) {
     this.apiKey = this.config.get<string>('TELYNX_API_KEY');
     this.profileId = this.config.get<string>('TELNYX_MESSAGING_PROFILE_ID');
+    this.fromNumber = this.config.get<string>('TELNYX_FROM');
     this.isConfigured = !!this.apiKey;
 
     if (this.isConfigured) {
@@ -24,7 +26,11 @@ export class TelnyxService {
   private buildPayload(to: string, text: string, sendAt?: string) {
     const normalized = to.startsWith('+') ? to : `+${to}`;
     const payload: Record<string, any> = { to: normalized, text };
-    if (this.profileId) payload.messaging_profile_id = this.profileId;
+    if (this.fromNumber) {
+      payload.from = this.fromNumber;
+    } else if (this.profileId) {
+      payload.messaging_profile_id = this.profileId;
+    }
     if (sendAt) payload.send_at = sendAt;
     return payload;
   }
