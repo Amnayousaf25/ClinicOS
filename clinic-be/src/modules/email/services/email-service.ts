@@ -3,10 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as Handlebars from 'handlebars';
 import { ConfigService } from '@nestjs/config';
-import { ResendEmailService } from './resend-email.service';
 import { SmtpEmailService } from './smtp-email.service';
-import { SendgridEmailService } from './sendgrid-email.service';
-import { SESMailService } from './ses-email.service';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -14,10 +11,7 @@ export class EmailService implements OnModuleInit {
 
   constructor(
     private readonly configService: ConfigService,
-    private readonly resendEmailService: ResendEmailService,
     private readonly smtpEmailService: SmtpEmailService,
-    private readonly sendgridEmailService: SendgridEmailService,
-    private readonly sesMailService: SESMailService,
   ) {}
 
   onModuleInit() {
@@ -85,9 +79,6 @@ export class EmailService implements OnModuleInit {
     bodyHtml = '',
     bodyText?: string,
   ) {
-    const host =
-      this.configService.get<string>('MAIL_HOST') ||
-      this.configService.get<string>('SMTP_HOST');
     const user =
       this.configService.get<string>('MAIL_USER') ||
       this.configService.get<string>('SMTP_USER');
@@ -112,22 +103,7 @@ export class EmailService implements OnModuleInit {
       throw new Error('SMTP credentials are not configured.');
     }
 
-    const provider = this.configService.get<string>('EMAIL_PROVIDER') || 'resend';
-    const hasSmtp = !!host;
-    const activeProvider = hasSmtp ? 'smtp' : provider.toLowerCase();
-
-    this.logger.log(`Attempting to send email via active provider: ${activeProvider}`);
-
-    if (activeProvider === 'smtp') {
-      await this.smtpEmailService.sendEmail(to, subject, bodyHtml, bodyText);
-    } else if (activeProvider === 'resend') {
-      await this.resendEmailService.sendEmail(to, subject, bodyHtml, bodyText);
-    } else if (activeProvider === 'sendgrid') {
-      await this.sendgridEmailService.sendEmail({ to, subject, html: bodyHtml });
-    } else if (activeProvider === 'ses') {
-      await this.sesMailService.sendEmail(to, subject, bodyHtml, bodyText);
-    } else {
-      throw new Error(`Unsupported email provider: ${activeProvider}`);
-    }
+    this.logger.log(`Attempting to send email via active provider: smtp`);
+    await this.smtpEmailService.sendEmail(to, subject, bodyHtml, bodyText);
   }
 }
