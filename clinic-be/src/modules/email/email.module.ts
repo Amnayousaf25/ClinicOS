@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 
 import { ResendEmailService } from './services/resend-email.service';
 import { EmailService } from './services/email-service';
@@ -14,7 +13,6 @@ import { SESMailService } from './services/ses-email.service';
     SmtpEmailService,
     SendgridEmailService,
     SESMailService,
-    ConfigService,
   ],
   exports: [EmailService],
 })

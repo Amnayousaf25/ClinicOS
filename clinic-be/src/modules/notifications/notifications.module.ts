@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { ConfigService } from '@nestjs/config';
 
 import { AuthModule } from 'src/modules/auth/auth.module';
 import { User, UserSchema } from 'src/modules/user/user.schema';
@@ -28,7 +27,7 @@ import {
       },
     ]),
   ],
-  providers: [NotificationsService, ConfigService],
+  providers: [NotificationsService],
   controllers: [NotificationsController],
   exports: [NotificationsService],
 })

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as Handlebars from 'handlebars';
@@ -9,7 +9,7 @@ import { SendgridEmailService } from './sendgrid-email.service';
 import { SESMailService } from './ses-email.service';
 
 @Injectable()
-export class EmailService {
+export class EmailService implements OnModuleInit {
   private readonly logger = new Logger(EmailService.name);
 
   constructor(
@@ -19,6 +19,38 @@ export class EmailService {
     private readonly sendgridEmailService: SendgridEmailService,
     private readonly sesMailService: SESMailService,
   ) {}
+
+  onModuleInit() {
+    const host =
+      this.configService.get<string>('MAIL_HOST') ||
+      this.configService.get<string>('SMTP_HOST');
+    const user =
+      this.configService.get<string>('MAIL_USER') ||
+      this.configService.get<string>('SMTP_USER');
+    const pass =
+      this.configService.get<string>('MAIL_PASSWORD') ||
+      this.configService.get<string>('SMTP_PASS');
+    const from =
+      this.configService.get<string>('MAIL_FROM') ||
+      this.configService.get<string>('SMTP_FROM') ||
+      this.configService.get<string>('EMAIL_FROM');
+
+    const isPlaceholder =
+      !user ||
+      user === 'your_email@gmail.com' ||
+      !pass ||
+      pass === 'your_app_password';
+
+    if (isPlaceholder) {
+      this.logger.warn(
+        `SMTP Configuration: NOT DETECTED or using placeholder values (User: ${user || 'none'}).`,
+      );
+    } else {
+      this.logger.log(
+        `SMTP Configuration: DETECTED. Host: ${host || 'none'}, User: ${user}, From: ${from || 'none'}.`,
+      );
+    }
+  }
 
   loadTemplate(templateName: string, context: Record<string, any>) {
     const filePath = path.resolve(`src/email-templates/${templateName}.hbs`);
@@ -33,9 +65,15 @@ export class EmailService {
     bodyHtml = '',
     bodyText?: string,
   ) {
-    const host = this.configService.get<string>('MAIL_HOST');
-    const user = this.configService.get<string>('MAIL_USER');
-    const pass = this.configService.get<string>('MAIL_PASSWORD');
+    const host =
+      this.configService.get<string>('MAIL_HOST') ||
+      this.configService.get<string>('SMTP_HOST');
+    const user =
+      this.configService.get<string>('MAIL_USER') ||
+      this.configService.get<string>('SMTP_USER');
+    const pass =
+      this.configService.get<string>('MAIL_PASSWORD') ||
+      this.configService.get<string>('SMTP_PASS');
 
     const isPlaceholder =
       !user ||

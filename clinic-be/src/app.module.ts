@@ -37,7 +37,8 @@ import { CONFIG } from 'src/common/constants/config.constants';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      envFilePath: `.env.${process.env.NODE_ENV}`,
+      envFilePath: `.env.${process.env.NODE_ENV || 'dev'}`,
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
 
     MongooseModule.forRootAsync({
