@@ -9,10 +9,14 @@ export class ResendEmailService {
   private readonly from: string;
 
   constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('Email_API_KEY');
+    const apiKey =
+      this.configService.get<string>('EMAIL_API_KEY') ||
+      this.configService.get<string>('Email_API_KEY');
     this.resend = new Resend(apiKey);
     this.from =
-      this.configService.get<string>('EMAIL_FROM') || 'support@hourlli.com';
+      this.configService.get<string>('EMAIL_FROM') ||
+      this.configService.get<string>('MAIL_FROM') ||
+      'support@clinicos.com';
   }
 
   async sendEmail(

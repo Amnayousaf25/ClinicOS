@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as Handlebars from 'handlebars';
 import { ConfigService } from '@nestjs/config';
 import { SmtpEmailService } from './smtp-email.service';
+import { ResendEmailService } from './resend-email.service';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -12,58 +13,23 @@ export class EmailService implements OnModuleInit {
   constructor(
     private readonly configService: ConfigService,
     private readonly smtpEmailService: SmtpEmailService,
+    private readonly resendEmailService: ResendEmailService,
   ) {}
 
   onModuleInit() {
-    const host =
-      this.configService.get<string>('MAIL_HOST') ||
-      this.configService.get<string>('SMTP_HOST');
-    const user =
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'dev';
+    this.logger.log(`[EmailService] Initializing in environment: ${nodeEnv}`);
+
+    const smtpUser =
       this.configService.get<string>('MAIL_USER') ||
       this.configService.get<string>('SMTP_USER');
-    const pass =
-      this.configService.get<string>('MAIL_PASSWORD') ||
-      this.configService.get<string>('SMTP_PASS');
-    const from =
-      this.configService.get<string>('MAIL_FROM') ||
-      this.configService.get<string>('SMTP_FROM') ||
-      this.configService.get<string>('EMAIL_FROM');
+    const resendApiKey =
+      this.configService.get<string>('EMAIL_API_KEY') ||
+      this.configService.get<string>('Email_API_KEY');
 
-    // Diagnostic logs to troubleshoot production environment loading
-    const envKeys = Object.keys(process.env).filter(
-      (k) => k.startsWith('MAIL_') || k.startsWith('SMTP_') || k.startsWith('EMAIL_'),
+    this.logger.log(
+      `[EmailService Diagnostic] SMTP User present: ${!!smtpUser}, Resend API Key present: ${!!resendApiKey}`,
     );
-    this.logger.log(`[SMTP Diagnostic] Environment variable keys found: ${envKeys.join(', ')}`);
-
-    const configStates = {
-      MAIL_HOST: !!this.configService.get('MAIL_HOST'),
-      SMTP_HOST: !!this.configService.get('SMTP_HOST'),
-      MAIL_USER: !!this.configService.get('MAIL_USER'),
-      SMTP_USER: !!this.configService.get('SMTP_USER'),
-      MAIL_PASSWORD: !!this.configService.get('MAIL_PASSWORD'),
-      SMTP_PASS: !!this.configService.get('SMTP_PASS'),
-      MAIL_FROM: !!this.configService.get('MAIL_FROM'),
-      SMTP_FROM: !!this.configService.get('SMTP_FROM'),
-      EMAIL_FROM: !!this.configService.get('EMAIL_FROM'),
-      NODE_ENV: this.configService.get('NODE_ENV') || 'undefined',
-    };
-    this.logger.log(`[SMTP Diagnostic] ConfigService keys resolved: ${JSON.stringify(configStates)}`);
-
-    const isPlaceholder =
-      !user ||
-      user === 'your_email@gmail.com' ||
-      !pass ||
-      pass === 'your_app_password';
-
-    if (isPlaceholder) {
-      this.logger.warn(
-        `SMTP Configuration: NOT DETECTED or using placeholder values (User: ${user || 'none'}).`,
-      );
-    } else {
-      this.logger.log(
-        `SMTP Configuration: DETECTED. Host: ${host || 'none'}, User: ${user}, From: ${from || 'none'}.`,
-      );
-    }
   }
 
   loadTemplate(templateName: string, context: Record<string, any>) {
@@ -79,31 +45,47 @@ export class EmailService implements OnModuleInit {
     bodyHtml = '',
     bodyText?: string,
   ) {
-    const user =
-      this.configService.get<string>('MAIL_USER') ||
-      this.configService.get<string>('SMTP_USER');
-    const pass =
-      this.configService.get<string>('MAIL_PASSWORD') ||
-      this.configService.get<string>('SMTP_PASS');
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'dev';
+    const isProduction = nodeEnv === 'production' || nodeEnv === 'prod';
 
-    const isPlaceholder =
-      !user ||
-      user === 'your_email@gmail.com' ||
-      !pass ||
-      pass === 'your_app_password';
+    if (isProduction) {
+      this.logger.log(`[EmailService] Production mode. Routing via Resend API to: ${to}`);
+      try {
+        const result = await this.resendEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+        return result;
+      } catch (error: any) {
+        this.logger.error(`[EmailService] Resend API error sending email to ${to}:`, error);
+        throw error;
+      }
+    } else {
+      this.logger.log(`[EmailService] Development mode. Routing via SMTP to: ${to}`);
+      const user =
+        this.configService.get<string>('MAIL_USER') ||
+        this.configService.get<string>('SMTP_USER');
+      const pass =
+        this.configService.get<string>('MAIL_PASSWORD') ||
+        this.configService.get<string>('SMTP_PASS');
 
-    if (isPlaceholder) {
-      this.logger.warn(
-        `[EMAIL NOT SENT] Placeholder SMTP credentials detected (MAIL_USER=${user}). Please configure actual credentials in .env.dev to receive actual emails!`,
-      );
-      const isDev = this.configService.get<string>('NODE_ENV') === 'dev';
-      if (isDev) {
+      const isPlaceholder =
+        !user ||
+        user === 'your_email@gmail.com' ||
+        !pass ||
+        pass === 'your_app_password';
+
+      if (isPlaceholder) {
+        this.logger.warn(
+          `[EMAIL NOT SENT] Placeholder SMTP credentials detected (MAIL_USER=${user}). Bypassing email send locally!`,
+        );
         return { success: true, dryRun: true };
       }
-      throw new Error('SMTP credentials are not configured.');
-    }
 
-    this.logger.log(`Attempting to send email via active provider: smtp`);
-    await this.smtpEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+      try {
+        const result = await this.smtpEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+        return result;
+      } catch (error: any) {
+        this.logger.error(`[EmailService] SMTP error sending email to ${to}:`, error);
+        throw error;
+      }
+    }
   }
 }
