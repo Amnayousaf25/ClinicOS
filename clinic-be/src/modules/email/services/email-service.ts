@@ -35,6 +35,26 @@ export class EmailService implements OnModuleInit {
       this.configService.get<string>('SMTP_FROM') ||
       this.configService.get<string>('EMAIL_FROM');
 
+    // Diagnostic logs to troubleshoot production environment loading
+    const envKeys = Object.keys(process.env).filter(
+      (k) => k.startsWith('MAIL_') || k.startsWith('SMTP_') || k.startsWith('EMAIL_'),
+    );
+    this.logger.log(`[SMTP Diagnostic] Environment variable keys found: ${envKeys.join(', ')}`);
+
+    const configStates = {
+      MAIL_HOST: !!this.configService.get('MAIL_HOST'),
+      SMTP_HOST: !!this.configService.get('SMTP_HOST'),
+      MAIL_USER: !!this.configService.get('MAIL_USER'),
+      SMTP_USER: !!this.configService.get('SMTP_USER'),
+      MAIL_PASSWORD: !!this.configService.get('MAIL_PASSWORD'),
+      SMTP_PASS: !!this.configService.get('SMTP_PASS'),
+      MAIL_FROM: !!this.configService.get('MAIL_FROM'),
+      SMTP_FROM: !!this.configService.get('SMTP_FROM'),
+      EMAIL_FROM: !!this.configService.get('EMAIL_FROM'),
+      NODE_ENV: this.configService.get('NODE_ENV') || 'undefined',
+    };
+    this.logger.log(`[SMTP Diagnostic] ConfigService keys resolved: ${JSON.stringify(configStates)}`);
+
     const isPlaceholder =
       !user ||
       user === 'your_email@gmail.com' ||
