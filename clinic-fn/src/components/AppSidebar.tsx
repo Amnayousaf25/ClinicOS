@@ -83,7 +83,7 @@ const AppSidebar = ({ mobile, role, email, sidebarOpen, onSidebarOpenChange }: A
         )}
       </div>
 
-      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto scrollbar-none">
         {mobile && <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3.5 pt-3 pb-2">Menu</p>}
         {filtered.map((item) => {
           const active = location.pathname === item.to;
