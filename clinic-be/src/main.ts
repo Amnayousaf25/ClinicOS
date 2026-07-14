@@ -12,6 +12,9 @@ import { CONFIG } from 'src/common/constants/config.constants';
 // Configure Node.js DNS to use Google and Cloudflare public DNS servers.
 // This works around Windows IPv6 DNS resolution issues with MongoDB Atlas SRV URIs.
 dns.setServers(['8.8.8.8', '1.1.1.1']);
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 async function bootstrap(): Promise<void> {
   // Load .env before creating the app so CORS origins are available

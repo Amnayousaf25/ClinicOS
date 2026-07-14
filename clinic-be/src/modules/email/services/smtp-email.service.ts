@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import * as dns from 'dns';
 
 @Injectable()
 export class SmtpEmailService {
@@ -49,6 +50,9 @@ export class SmtpEmailService {
           pass,
         },
         family: 4, // Force IPv4 to resolve production network routing failures
+        lookup: (hostname, options, callback) => {
+          dns.lookup(hostname, { ...options, family: 4 }, callback);
+        },
       } as nodemailer.TransportOptions);
       this.logger.log(
         `SMTP Mail transporter initialized (host: ${host}, port: ${port}, secure: ${secure})`,
