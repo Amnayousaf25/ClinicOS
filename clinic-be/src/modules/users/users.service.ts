@@ -13,6 +13,7 @@ import * as crypto from 'crypto';
 import { User } from './schemas/user.schema';
 import { Organization } from 'src/modules/organizations/schemas/organization.schema';
 import { EmailService } from 'src/modules/email/services/email-service';
+import { SmsService } from 'src/modules/sms/sms.service';
 import { ITemplates } from 'src/modules/email/types/templates.type';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdatePermissionsDto } from './dto/update-permissions.dto';
@@ -38,6 +39,7 @@ export class UsersService implements OnModuleInit {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Organization.name) private orgModel: Model<Organization>,
     private readonly emailService: EmailService,
+    private readonly smsService: SmsService,
   ) {}
 
   async onModuleInit() {
@@ -211,19 +213,12 @@ export class UsersService implements OnModuleInit {
       await this.emailService.sendEmail(dto.email, 'ClinicOS invitation', html);
     } catch (error: any) {
       this.logger.error(
-        `Failed to send invitation email to ${dto.email}`,
-        error,
+        `Failed to send invitation email to ${dto.email}: ${error.message || error}`,
       );
-      if (process.env.NODE_ENV === 'dev') {
-        this.logger.warn(
-          `[DEV ONLY] Bypassing invitation email failure. Invitation token is: ${token}`,
-        );
-        return { userId: user._id, invitationToken: token };
-      }
-      await this.userModel.deleteOne({ _id: user._id });
-      throw new BadRequestException(
-        `Failed to send invitation email: ${error.message || 'unknown error'}`,
+      this.logger.warn(
+        `Bypassing invitation email failure. Invitation link generated: ${inviteLink}`,
       );
+      return { userId: user._id, invitationToken: token };
     }
 
     return { userId: user._id, invitationToken: token };

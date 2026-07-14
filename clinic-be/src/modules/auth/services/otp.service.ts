@@ -9,6 +9,7 @@ import { SerializeHttpResponse } from 'src/utils/serializer';
 import { ITemplates } from 'src/modules/email/types/templates.type';
 import { User } from 'src/modules/user/user.schema';
 import { EmailService } from 'src/modules/email/services/email-service';
+import { SmsService } from 'src/modules/sms/sms.service';
 
 import { OTP_TYPE } from '../types/otp.type';
 import { EMAIL_SUBJECT } from '../types/email.type';
@@ -45,6 +46,7 @@ export class OtpService {
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
+    private readonly smsService: SmsService,
   ) {}
 
   async generateOTP(
@@ -126,7 +128,28 @@ export class OtpService {
       this.logger.log(`[DEV ONLY] Generated OTP for ${user.email}: ${otp}`);
     }
 
-    await this.emailService.sendEmail(user.email, subject, template);
+    try {
+      await this.emailService.sendEmail(user.email, subject, template);
+    } catch (emailError: any) {
+      this.logger.warn(
+        `Failed to send OTP email to ${user.email}: ${emailError.message || emailError}. Attempting SMS fallback...`,
+      );
+      if (user.phone) {
+        try {
+          const smsBody = `Your ClinicOS verification code is: ${otp}. Valid for 10 minutes.`;
+          await this.smsService.sendSms(user.phone, smsBody);
+          this.logger.log(`OTP verification code successfully sent via SMS to ${user.phone}`);
+        } catch (smsError: any) {
+          this.logger.error(
+            `SMS fallback also failed for ${user.phone}: ${smsError.message || smsError}`,
+          );
+          throw new Error(`Failed to send OTP via Email or SMS: ${emailError.message}`);
+        }
+      } else {
+        this.logger.error(`Email failed and no phone number registered for ${user.email}`);
+        throw emailError;
+      }
+    }
     return SerializeHttpResponse(true, HttpStatus.OK, OTP_SUCCESS.GENERATE_OTP);
   }
 

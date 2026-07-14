@@ -9,6 +9,7 @@ import { UsersService } from './users.service';
 import { User } from './schemas/user.schema';
 import { Organization } from 'src/modules/organizations/schemas/organization.schema';
 import { EmailService } from 'src/modules/email/services/email-service';
+import { SmsService } from 'src/modules/sms/sms.service';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -47,6 +48,10 @@ describe('UsersService', () => {
     sendEmail: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockSmsService = {
+    sendSms: jest.fn().mockResolvedValue({ success: true, sid: 'mock-sid' }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -54,6 +59,7 @@ describe('UsersService', () => {
         { provide: getModelToken(User.name), useValue: mockUserModel },
         { provide: getModelToken(Organization.name), useValue: mockOrgModel },
         { provide: EmailService, useValue: mockEmailService },
+        { provide: SmsService, useValue: mockSmsService },
       ],
     }).compile();
 
