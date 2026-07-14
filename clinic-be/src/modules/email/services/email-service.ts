@@ -57,33 +57,38 @@ export class EmailService implements OnModuleInit {
         this.configService.get<string>('EMAIL_API_KEY') ||
         this.configService.get<string>('Email_API_KEY');
 
+      this.logger.log(`[EmailService] Production mode. Starting email delivery fallback chain to: ${to}`);
+
+      // 1. Try Brevo HTTP API first if key is present
       if (brevoApiKey) {
-        this.logger.log(`[EmailService] Production mode. Routing via Brevo HTTP API to: ${to}`);
         try {
+          this.logger.log(`[EmailService] Attempting delivery via Brevo HTTP API...`);
           const result = await this.brevoEmailService.sendEmail(to, subject, bodyHtml, bodyText);
           return result;
         } catch (error: any) {
-          this.logger.error(`[EmailService] Brevo HTTP API error sending email to ${to}:`, error);
-          throw error;
+          this.logger.warn(`[EmailService] Brevo HTTP API failed: ${error.message || error}. Proceeding to fallback...`);
         }
-      } else if (resendApiKey) {
-        this.logger.log(`[EmailService] Production mode. Routing via Resend API to: ${to}`);
+      }
+
+      // 2. Try Resend API if key is present
+      if (resendApiKey) {
         try {
+          this.logger.log(`[EmailService] Attempting delivery via Resend API...`);
           const result = await this.resendEmailService.sendEmail(to, subject, bodyHtml, bodyText);
           return result;
         } catch (error: any) {
-          this.logger.error(`[EmailService] Resend API error sending email to ${to}:`, error);
-          throw error;
+          this.logger.warn(`[EmailService] Resend API failed: ${error.message || error}. Proceeding to fallback...`);
         }
-      } else {
-        this.logger.log(`[EmailService] Production mode fallback. Routing via SMTP to: ${to}`);
-        try {
-          const result = await this.smtpEmailService.sendEmail(to, subject, bodyHtml, bodyText);
-          return result;
-        } catch (error: any) {
-          this.logger.error(`[EmailService] SMTP fallback error sending email to ${to}:`, error);
-          throw error;
-        }
+      }
+
+      // 3. Fallback to SmtpEmailService
+      try {
+        this.logger.log(`[EmailService] Attempting delivery via SmtpEmailService...`);
+        const result = await this.smtpEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+        return result;
+      } catch (error: any) {
+        this.logger.error(`[EmailService] SMTP delivery fallback failed: ${error.message || error}`);
+        throw error;
       }
     } else {
       this.logger.log(`[EmailService] Development mode. Routing via SMTP to: ${to}`);
