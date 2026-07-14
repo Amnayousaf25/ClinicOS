@@ -12,9 +12,11 @@ import {
   ReminderLogDocument,
 } from 'src/modules/reminders/schemas/reminder-log.schema';
 
+import { SmsService } from './sms.service';
+
 /**
  * SMS webhook for incoming replies.
- * Handles YES/NO replies to confirm/cancel appointments.
+ * Handles YES/NO replies to confirm/cancel appointments, and custom queries.
  */
 @ApiTags('SMS Webhook')
 @Controller('sms')
@@ -26,6 +28,7 @@ export class SmsController {
     private appointmentModel: Model<AppointmentDocument>,
     @InjectModel(ReminderLog.name)
     private logModel: Model<ReminderLogDocument>,
+    private readonly smsService: SmsService,
   ) {}
 
   @Post('webhook')
@@ -39,12 +42,8 @@ export class SmsController {
     },
   ) {
     const from = body.from || body.phone || '';
-    const text = (body.text || body.message || '').trim().toUpperCase();
+    const text = (body.text || body.message || '').trim();
     this.logger.log(`Incoming SMS from ${from}: ${text}`);
-
-    if (text !== 'YES' && text !== 'NO') {
-      return { status: 'ignored', reason: 'unrecognized reply' };
-    }
 
     const normalizedPhone = from.replace(/^\+/, '');
     const phoneVariants = [from, normalizedPhone, `+${normalizedPhone}`].filter(
@@ -55,18 +54,44 @@ export class SmsController {
       .findOne({
         patientPhone: { $in: phoneVariants },
         status: {
-          $in: [AppointmentStatus.Pending, AppointmentStatus.Confirmed],
+          $in: [AppointmentStatus.Pending, AppointmentStatus.Confirmed, AppointmentStatus.Rescheduled],
         },
       })
       .sort({ date: 1, time: 1 })
       .exec();
 
     if (!appointment) {
-      this.logger.warn(`No pending appointment found for phone ${from}`);
+      this.logger.warn(`No active appointment found for phone ${from}`);
       return { status: 'no_appointment' };
     }
 
-    if (text === 'YES') {
+    const upperText = text.toUpperCase();
+
+    if (upperText !== 'YES' && upperText !== 'NO') {
+      // Log the custom query in the ReminderLog
+      try {
+        await this.logModel.findOneAndUpdate(
+          { appointmentId: appointment._id },
+          { $set: { reply: text } },
+          { sort: { sentAt: -1 } },
+        );
+      } catch (err: unknown) {
+        this.logger.error(`Failed to update reply log: ${String(err)}`);
+      }
+
+      // Send auto-response back to the patient
+      const autoResponse = `Thank you for your message. We have received your query and a clinic representative will contact you shortly.`;
+      try {
+        await this.smsService.sendSms(from, autoResponse);
+      } catch (err: any) {
+        this.logger.error(`Failed to send auto-response SMS to ${from}: ${err.message}`);
+      }
+
+      this.logger.log(`Custom query from ${from} logged and automated response sent.`);
+      return { status: 'query_received', reply: text };
+    }
+
+    if (upperText === 'YES') {
       appointment.status = AppointmentStatus.Confirmed;
       await appointment.save();
 
