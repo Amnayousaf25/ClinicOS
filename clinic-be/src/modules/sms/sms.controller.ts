@@ -34,15 +34,19 @@ export class SmsController {
   @Post('webhook')
   async handleIncomingReply(
     @Body()
-    body: {
-      from?: string;
-      text?: string;
-      phone?: string;
-      message?: string;
-    },
+    body: any,
   ) {
-    const from = body.from || body.phone || '';
-    const text = (body.text || body.message || '').trim();
+    let from = body.from || body.phone || '';
+    let text = body.text || body.message || '';
+
+    // Support Telnyx's nested webhook format
+    if (body?.data?.payload) {
+      const telnyxPayload = body.data.payload;
+      from = telnyxPayload.from?.phone_number || from;
+      text = telnyxPayload.text || text;
+    }
+
+    text = text.trim();
     this.logger.log(`Incoming SMS from ${from}: ${text}`);
 
     const normalizedPhone = from.replace(/^\+/, '');
