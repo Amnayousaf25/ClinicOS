@@ -8,6 +8,7 @@ const statusStyles: Record<string, string> = {
   'no-show': 'bg-muted text-muted-foreground',
   arrived: 'bg-info/15 text-info',
   rescheduled: 'bg-primary/15 text-primary',
+  'intake-submitted': 'bg-teal-500/15 text-teal-600',
 };
 
 const statusLabels: Record<string, string> = {
@@ -17,6 +18,7 @@ const statusLabels: Record<string, string> = {
   'no-show': 'No-show',
   arrived: 'Arrived',
   rescheduled: 'Rescheduled',
+  'intake-submitted': 'Intake Submitted',
 };
 
 export const AppointmentStatusBadge = ({ status }: { status: AppointmentStatus }) => (

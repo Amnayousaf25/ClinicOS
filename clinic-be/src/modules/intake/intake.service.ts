@@ -212,21 +212,16 @@ export class IntakeService implements OnModuleInit {
     apt.patientId = patient._id as Types.ObjectId;
     apt.intakeStatus = IntakeStatus.Confirmed;
 
-    // Only auto-transition to "arrived" if the patient is actually here
-    // today. Pre-arrival intake (filled in advance from the SMS link) is
-    // standard EHR practice — it should record the form but leave status
-    // alone so staff can mark "arrived" when the patient walks in.
-    const today = new Date().toISOString().split('T')[0];
-    const isSameDay = apt.date === today;
-
+    // Automatically transition to IntakeSubmitted whenever the patient
+    // submits the intake form — regardless of whether it is the same day.
+    // Staff can then manually mark the patient as Arrived when they walk in.
     const previousStatus = apt.status;
     if (
-      isSameDay &&
-      (apt.status === AppointmentStatus.Pending ||
-        apt.status === AppointmentStatus.Confirmed ||
-        apt.status === AppointmentStatus.Rescheduled)
+      apt.status === AppointmentStatus.Pending ||
+      apt.status === AppointmentStatus.Confirmed ||
+      apt.status === AppointmentStatus.Rescheduled
     ) {
-      apt.status = AppointmentStatus.Arrived;
+      apt.status = AppointmentStatus.IntakeSubmitted;
     }
 
     await apt.save();

@@ -141,9 +141,9 @@ describe('IntakeService', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
-  // ─── Same-day rule for auto-arrived ──────────────────────────────────────
+  // ─── Intake submission always sets IntakeSubmitted ──────────────────────
 
-  it('auto-transitions to arrived when intake is submitted on the appointment date', async () => {
+  it('auto-transitions to IntakeSubmitted when intake form is submitted', async () => {
     const apt = makeAppointment({ date: today });
     mockFindAppointment(apt);
 
@@ -152,17 +152,17 @@ describe('IntakeService', () => {
       appointmentId: String(apt._id),
     } as any);
 
-    expect(apt.status).toBe(AppointmentStatus.Arrived);
+    expect(apt.status).toBe(AppointmentStatus.IntakeSubmitted);
     expect(apt.intakeStatus).toBe(IntakeStatus.Confirmed);
     expect(mockHistoryModel.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        toStatus: AppointmentStatus.Arrived,
+        toStatus: AppointmentStatus.IntakeSubmitted,
         reason: 'Intake form submitted',
       }),
     );
   });
 
-  it('does NOT auto-arrive when intake is submitted before the appointment date', async () => {
+  it('also transitions to IntakeSubmitted when intake is submitted before the appointment date', async () => {
     const apt = makeAppointment({
       date: futureDate,
       status: AppointmentStatus.Confirmed,
@@ -174,9 +174,9 @@ describe('IntakeService', () => {
       appointmentId: String(apt._id),
     } as any);
 
-    expect(apt.status).toBe(AppointmentStatus.Confirmed); // unchanged
+    expect(apt.status).toBe(AppointmentStatus.IntakeSubmitted);
     expect(apt.intakeStatus).toBe(IntakeStatus.Confirmed);
-    expect(mockHistoryModel.create).not.toHaveBeenCalledWith(
+    expect(mockHistoryModel.create).toHaveBeenCalledWith(
       expect.objectContaining({ reason: 'Intake form submitted' }),
     );
   });

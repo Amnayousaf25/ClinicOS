@@ -10,6 +10,7 @@ const statusOptions: { value: AppointmentStatus; label: string; icon: typeof Che
   { value: 'pending', label: 'Pending', icon: Clock, bg: 'bg-warning/10', text: 'text-warning' },
   { value: 'confirmed', label: 'Confirmed', icon: CheckCircle, bg: 'bg-success/10', text: 'text-success' },
   { value: 'arrived', label: 'Arrived', icon: UserCheck, bg: 'bg-info/10', text: 'text-info' },
+  { value: 'intake-submitted', label: 'Intake Submitted', icon: CheckCircle, bg: 'bg-teal-500/10', text: 'text-teal-500' },
   { value: 'no-show', label: 'No-show', icon: UserX, bg: 'bg-destructive/10', text: 'text-destructive' },
   { value: 'cancelled', label: 'Cancelled', icon: XCircle, bg: 'bg-muted', text: 'text-muted-foreground' },
   { value: 'rescheduled', label: 'Rescheduled', icon: RefreshCw, bg: 'bg-primary/10', text: 'text-primary' },
@@ -31,12 +32,10 @@ export const StatusDropdown = ({ appointment }: { appointment: Appointment }) =>
   if (!appointment) return null;
   const current = getStatus(appointment.status);
 
-  // Lock the dropdown once the appointment is in a terminal state OR the
-  // patient has submitted/confirmed intake.
+  // Lock the dropdown once the appointment is in a terminal state.
+  // 'intake-submitted' is NOT terminal — staff must still be able to mark Arrived.
   const isLocked =
-    TERMINAL_STATUSES.includes(appointment.status) ||
-    appointment.intakeStatus === 'confirmed' ||
-    appointment.intakeStatus === 'submitted';
+    TERMINAL_STATUSES.includes(appointment.status);
 
   const handleChange = (value: string) => {
     const next = value as AppointmentStatus;

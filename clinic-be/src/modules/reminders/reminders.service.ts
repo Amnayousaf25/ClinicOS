@@ -773,6 +773,11 @@ export class RemindersService {
 
         const fromStatus = apt.status;
         apt.status = AppointmentStatus.NoShow;
+        // Guard: legacy appointments without a bookingId will fail Mongoose
+        // validation when saved. Assign one now so the cron job stays resilient.
+        if (!apt.bookingId) {
+          apt.bookingId = require('crypto').randomUUID();
+        }
         await apt.save();
 
         const identity = patientIdentity(apt);

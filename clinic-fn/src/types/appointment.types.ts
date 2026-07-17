@@ -9,7 +9,8 @@ export type AppointmentStatus =
   | 'cancelled'
   | 'no-show'
   | 'arrived'
-  | 'rescheduled';
+  | 'rescheduled'
+  | 'intake-submitted';
 
 export type AppointmentType = 'scheduled' | 'walk-in';
 

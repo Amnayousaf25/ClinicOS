@@ -12,4 +12,5 @@ export const statusBgColor: Record<AppointmentStatus, string> = {
   'no-show': 'bg-muted-foreground',
   arrived: 'bg-info',
   rescheduled: 'bg-secondary',
+  'intake-submitted': 'bg-teal-500',
 };

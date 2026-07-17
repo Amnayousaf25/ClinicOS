@@ -10,6 +10,7 @@ export enum AppointmentStatus {
   NoShow = 'no-show',
   Arrived = 'arrived',
   Rescheduled = 'rescheduled',
+  IntakeSubmitted = 'intake-submitted',
 }
 
 export enum IntakeStatus {

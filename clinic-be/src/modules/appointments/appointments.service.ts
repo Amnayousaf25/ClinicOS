@@ -40,12 +40,14 @@ const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
     AppointmentStatus.Arrived,
     AppointmentStatus.NoShow,
     AppointmentStatus.Rescheduled,
+    AppointmentStatus.IntakeSubmitted,
   ],
   [AppointmentStatus.Confirmed]: [
     AppointmentStatus.Arrived,
     AppointmentStatus.Cancelled,
     AppointmentStatus.NoShow,
     AppointmentStatus.Rescheduled,
+    AppointmentStatus.IntakeSubmitted,
   ],
   [AppointmentStatus.Arrived]: [],
   [AppointmentStatus.Cancelled]: [],
@@ -54,6 +56,13 @@ const VALID_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
     AppointmentStatus.Pending,
     AppointmentStatus.Confirmed,
     AppointmentStatus.Cancelled,
+    AppointmentStatus.IntakeSubmitted,
+  ],
+  [AppointmentStatus.IntakeSubmitted]: [
+    AppointmentStatus.Arrived,
+    AppointmentStatus.Cancelled,
+    AppointmentStatus.NoShow,
+    AppointmentStatus.Rescheduled,
   ],
 };
 
