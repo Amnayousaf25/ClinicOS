@@ -210,7 +210,7 @@ export class IntakeService implements OnModuleInit {
     }
 
     apt.patientId = patient._id as Types.ObjectId;
-    apt.intakeStatus = IntakeStatus.Confirmed;
+    apt.intakeStatus = IntakeStatus.Submitted;
 
     // Automatically transition to IntakeSubmitted whenever the patient
     // submits the intake form — regardless of whether it is the same day.
