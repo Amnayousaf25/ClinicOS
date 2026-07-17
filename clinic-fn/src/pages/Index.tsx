@@ -294,8 +294,8 @@ const DashboardPrototype = () => {
 const SchedulingShowcase = () => (
   <div className="relative rounded-3xl gradient-border shadow-3d p-6 overflow-hidden">
     <div className="grid grid-cols-7 gap-1.5 mb-4">
-      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d) => (
-        <div key={d} className="text-center text-[10px] font-bold text-muted-foreground">{d}</div>
+      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, index) => (
+        <div key={`${d}-${index}`} className="text-center text-[10px] font-bold text-muted-foreground">{d}</div>
       ))}
       {Array.from({ length: 21 }).map((_, i) => {
         const active = [4, 9, 14].includes(i);

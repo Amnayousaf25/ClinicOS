@@ -7,15 +7,7 @@ import type { Notification } from '@/types';
 
 dayjs.extend(relativeTime);
 
-const defaultNotifications: Notification[] = [
-  { id: '1', type: 'appointment', title: 'New Booking', message: 'Sarah Chen booked a Consultation for today at 9:00 AM', time: dayjs().subtract(12, 'minute').toISOString(), read: false },
-  { id: '2', type: 'intake', title: 'Intake Form Submitted', message: 'Emily Rodriguez completed her intake form', time: dayjs().subtract(35, 'minute').toISOString(), read: false },
-  { id: '3', type: 'reminder', title: 'SMS Reminder Sent', message: '24h reminder sent to Ava Williams for tomorrow', time: dayjs().subtract(1, 'hour').toISOString(), read: false },
-  { id: '4', type: 'system', title: 'Appointment Cancelled', message: 'Michael Thompson cancelled his 10:30 AM consultation', time: dayjs().subtract(2, 'hour').toISOString(), read: true },
-  { id: '5', type: 'appointment', title: 'Patient Arrived', message: 'Olivia Park checked in for Dermatology at 11:00 AM', time: dayjs().subtract(3, 'hour').toISOString(), read: true },
-  { id: '6', type: 'reminder', title: 'SMS Delivery Failed', message: 'Could not deliver 2h reminder to Daniel Kim', time: dayjs().subtract(4, 'hour').toISOString(), read: true },
-  { id: '7', type: 'intake', title: 'Intake Form Pending', message: 'James Miller has not completed his intake form — appointment in 30 min', time: dayjs().subtract(5, 'hour').toISOString(), read: true },
-];
+const defaultNotifications: Notification[] = [];
 
 const typeIcons = {
   appointment: Calendar,

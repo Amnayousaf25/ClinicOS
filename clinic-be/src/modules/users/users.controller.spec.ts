@@ -59,7 +59,7 @@ describe('UsersController', () => {
         message: RESPONSE.USERS.INVITED,
         data: inviteResult,
       });
-      expect(mockService.inviteUser).toHaveBeenCalledWith('org1', 'admin', dto);
+      expect(mockService.inviteUser).toHaveBeenCalledWith('org1', 'admin', dto, undefined);
     });
   });
 
@@ -74,6 +74,7 @@ describe('UsersController', () => {
       expect(mockService.findAll).toHaveBeenCalledWith('org1', {
         department: 'dept1',
         role: 'admin',
+        includeInactive: false,
       });
     });
 
@@ -83,6 +84,7 @@ describe('UsersController', () => {
       expect(mockService.findAll).toHaveBeenCalledWith('org1', {
         department: undefined,
         role: undefined,
+        includeInactive: false,
       });
     });
   });

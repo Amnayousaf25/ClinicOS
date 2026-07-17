@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -68,6 +69,8 @@ type ChangeContext = {
 
 @Injectable()
 export class AppointmentsService {
+  private readonly logger = new Logger(AppointmentsService.name);
+
   constructor(
     @InjectModel(Appointment.name)
     private appointmentModel: Model<AppointmentDocument>,
@@ -237,6 +240,18 @@ export class AppointmentsService {
     });
     // Refetch so the schema's pre-find hook resolves the refs.
     const populated = await this.appointmentModel.findById(saved._id);
+
+    if (newStatus === AppointmentStatus.Confirmed && populated) {
+      try {
+        await this.remindersService.sendBookingConfirmation(populated);
+        await this.remindersService.scheduleReminders(populated);
+      } catch (error: any) {
+        this.logger.error(
+          `Failed to send booking confirmation on status change to Confirmed: ${error.message || error}`,
+        );
+      }
+    }
+
     return populated ?? saved;
   }
 
@@ -302,15 +317,20 @@ export class AppointmentsService {
       changedBy: ctx.changedBy,
     });
 
+    const populated = await this.appointmentModel.findById(saved._id);
     // Schedule new reminders for the new time + send rescheduled notification
     try {
-      await this.remindersService.sendRescheduleNotification(saved);
-      await this.remindersService.scheduleReminders(saved);
-    } catch {
-      /* non-critical */
+      if (populated) {
+        await this.remindersService.sendRescheduleNotification(populated);
+        await this.remindersService.scheduleReminders(populated);
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to send reschedule notifications: ${error.message || error}`,
+      );
     }
 
-    return saved;
+    return populated ?? saved;
   }
 
   async reconfirm(
@@ -336,14 +356,20 @@ export class AppointmentsService {
       changedBy: ctx.changedBy,
     });
 
-    // Send confirmation email + SMS on reconfirmation
-    try {
-      await this.remindersService.sendBookingConfirmation(saved);
-    } catch {
-      /* non-blocking */
+    // Send confirmation email + SMS on reconfirmation using the populated version
+    const populated = await this.appointmentModel.findById(saved._id);
+    if (populated) {
+      try {
+        await this.remindersService.sendBookingConfirmation(populated);
+        await this.remindersService.scheduleReminders(populated);
+      } catch (error: any) {
+        this.logger.error(
+          `Failed to send booking confirmation on reconfirm: ${error.message || error}`,
+        );
+      }
     }
 
-    return saved;
+    return populated ?? saved;
   }
 
   async cancel(
@@ -379,13 +405,18 @@ export class AppointmentsService {
       changedBy: ctx.changedBy,
     });
 
+    const populated = await this.appointmentModel.findById(saved._id);
     try {
-      await this.remindersService.sendCancellationNotification(saved);
-    } catch {
-      /* non-critical */
+      if (populated) {
+        await this.remindersService.sendCancellationNotification(populated);
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to send cancellation notification: ${error.message || error}`,
+      );
     }
 
-    return saved;
+    return populated ?? saved;
   }
 
   async sendConfirmationSms(

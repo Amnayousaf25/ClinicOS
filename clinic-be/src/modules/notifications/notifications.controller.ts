@@ -57,6 +57,7 @@ export class NotificationsController {
     return res.status(response.status).json(response);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(NOTIFICATION_ROUTES.UNREAD_COUNT)
   @ApiOperation({
     summary: 'Get unread notifications count',

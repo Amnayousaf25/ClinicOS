@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
+import { getModelToken } from '@nestjs/mongoose';
 
 describe('MediaController', () => {
   let controller: MediaController;
@@ -11,10 +12,15 @@ describe('MediaController', () => {
     generatePresignedUrl: jest.fn(),
   };
 
+  const mockUserModel = {};
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MediaController],
-      providers: [{ provide: MediaService, useValue: mockMediaService }],
+      providers: [
+        { provide: MediaService, useValue: mockMediaService },
+        { provide: getModelToken('User'), useValue: mockUserModel },
+      ],
     }).compile();
 
     controller = module.get<MediaController>(MediaController);

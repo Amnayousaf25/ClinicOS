@@ -35,7 +35,9 @@ describe('DepartmentsService', () => {
 
   describe('findAll', () => {
     it('should return active departments', async () => {
-      const chainMock = { lean: jest.fn().mockResolvedValue([mockDept]) };
+      const leanMock = jest.fn().mockResolvedValue([mockDept]);
+      const sortMock = jest.fn().mockReturnValue({ lean: leanMock });
+      const chainMock = { sort: sortMock };
       mockModel.find.mockReturnValue(chainMock);
 
       const result = await service.findAll('org1');

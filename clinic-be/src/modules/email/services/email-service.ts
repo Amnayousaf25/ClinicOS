@@ -91,7 +91,36 @@ export class EmailService implements OnModuleInit {
         throw error;
       }
     } else {
-      this.logger.log(`[EmailService] Development mode. Routing via SMTP to: ${to}`);
+      this.logger.log(`[EmailService] Development mode. Routing email to: ${to}`);
+
+      const brevoApiKey = this.configService.get<string>('BREVO_API_KEY');
+      const resendApiKey =
+        this.configService.get<string>('EMAIL_API_KEY') ||
+        this.configService.get<string>('Email_API_KEY');
+
+      // 1. Try Brevo HTTP API first if key is present (most reliable)
+      if (brevoApiKey) {
+        try {
+          this.logger.log(`[EmailService] Attempting delivery via Brevo HTTP API...`);
+          const result = await this.brevoEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+          return result;
+        } catch (error: any) {
+          this.logger.warn(`[EmailService] Brevo HTTP API failed: ${error.message || error}. Trying next provider...`);
+        }
+      }
+
+      // 2. Try Resend API if key is present
+      if (resendApiKey) {
+        try {
+          this.logger.log(`[EmailService] Attempting delivery via Resend API...`);
+          const result = await this.resendEmailService.sendEmail(to, subject, bodyHtml, bodyText);
+          return result;
+        } catch (error: any) {
+          this.logger.warn(`[EmailService] Resend API failed: ${error.message || error}. Trying SMTP fallback...`);
+        }
+      }
+
+      // 3. Fallback to SMTP
       const user =
         this.configService.get<string>('MAIL_USER') ||
         this.configService.get<string>('SMTP_USER');

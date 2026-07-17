@@ -1,4 +1,4 @@
-import { Calendar } from 'lucide-react';
+import { Calendar, ClipboardPlus } from 'lucide-react';
 import dayjs from 'dayjs';
 import { DataTableHead } from '@/components/DataTableHead';
 import { IntakeStatusBadge } from '@/components/StatusBadge';
@@ -8,6 +8,13 @@ import { PatientCell } from './PatientCell';
 import { RemindersDots } from './RemindersDots';
 import { refId, serviceName } from '@/lib/appointmentDisplay';
 import type { Appointment } from '@/types';
+import { useState, useEffect } from 'react';
+import { useUpdateStatus, useCancel } from '@/hooks/useApi';
+import RescheduleDialog from '@/components/RescheduleDialog';
+import NewIntakeFormDialog from '@/components/NewIntakeFormDialog';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { AlertCircle } from 'lucide-react';
 
 interface Props {
   appointments: Appointment[];
@@ -44,6 +51,36 @@ export const AppointmentsTable = ({
   cellPadding = DEFAULT_PADDING,
   emptyMessage = 'No appointments found',
 }: Props) => {
+  const updateStatus = useUpdateStatus();
+  const cancelAppointment = useCancel();
+  const [rescheduleApt, setRescheduleApt] = useState<Appointment | null>(null);
+  const [intakeApt, setIntakeApt] = useState<Appointment | null>(null);
+  const [now, setNow] = useState(dayjs());
+
+  // Tick the clock every minute to keep lateness calculations active
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(dayjs());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatDuration = (mins: number) => {
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    return remMins > 0 ? `${hrs}h ${remMins}m` : `${hrs}h`;
+  };
+
+  const getLatenessMinutes = (apt: Appointment) => {
+    if (apt.status !== 'pending' && apt.status !== 'confirmed') return 0;
+    const aptDateTime = dayjs(`${apt.date}T${apt.time}`);
+    if (now.isAfter(aptDateTime)) {
+      return now.diff(aptDateTime, 'minute');
+    }
+    return 0;
+  };
+
   const columns = [
     { label: 'Date', show: showDate },
     { label: 'Time' },
@@ -83,9 +120,69 @@ export const AppointmentsTable = ({
               {dayjs(apt.date).format('MMM D')} · {apt.time} · {serviceName(apt)}
               {showProvider && providerName && ` · ${providerName(refId(apt.providerId))}`}
             </p>
+            {(() => {
+              const latenessMins = getLatenessMinutes(apt);
+              if (latenessMins <= 0) return null;
+              const isOverdue = latenessMins > 120;
+              return (
+                <div className="flex flex-col gap-1 select-none">
+                  <span
+                    className={cn(
+                      'text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 w-max leading-none',
+                      isOverdue
+                        ? 'bg-destructive/15 text-destructive border border-destructive/20'
+                        : 'bg-warning/15 text-warning border border-warning/20',
+                    )}
+                  >
+                    <AlertCircle className="w-2.5 h-2.5 shrink-0" />
+                    {isOverdue
+                      ? `Overdue: ${formatDuration(latenessMins)}`
+                      : `Late: ${formatDuration(latenessMins)}`}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-[9px] font-semibold text-muted-foreground">
+                    <button
+                      onClick={() => updateStatus.mutate({ id: apt._id, status: 'no-show' })}
+                      className="hover:text-destructive transition-colors"
+                    >
+                      No-show
+                    </button>
+                    <span>·</span>
+                    <button
+                      onClick={() => setRescheduleApt(apt)}
+                      className="hover:text-primary transition-colors"
+                    >
+                      Reschedule
+                    </button>
+                    <span>·</span>
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to cancel this appointment?')) {
+                          cancelAppointment.mutate(apt._id);
+                        }
+                      }}
+                      className="hover:text-destructive transition-colors text-destructive/80"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <IntakeStatusBadge status={apt.intakeStatus} />
+                {apt.intakeStatus === 'pending' || apt.intakeStatus === 'not-sent' ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIntakeApt(apt)}
+                    className="h-7 text-[10px] font-semibold rounded-lg border-primary/30 text-primary hover:bg-primary/10 gap-1"
+                  >
+                    <ClipboardPlus className="w-3 h-3" />
+                    Fill Intake
+                  </Button>
+                ) : (
+                  <IntakeStatusBadge status={apt.intakeStatus} />
+                )}
                 {showReminders && <RemindersDots reminders={apt.smsReminders} />}
               </div>
               <QuickActions appointment={apt} />
@@ -117,6 +214,57 @@ export const AppointmentsTable = ({
                     <p className="text-[10px] text-muted-foreground">
                       {dayjs(apt.date).format('MMM D')}
                     </p>
+                    {(() => {
+                      const latenessMins = getLatenessMinutes(apt);
+                      if (latenessMins <= 0) return null;
+                      const isOverdue = latenessMins > 120;
+                      return (
+                        <div className="mt-1 flex flex-col gap-1 select-none">
+                          <span
+                            className={cn(
+                              'text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 w-max leading-none',
+                              isOverdue
+                                ? 'bg-destructive/15 text-destructive border border-destructive/20'
+                                : 'bg-warning/15 text-warning border border-warning/20',
+                            )}
+                          >
+                            <AlertCircle className="w-2.5 h-2.5 shrink-0" />
+                            {isOverdue
+                              ? `Overdue: ${formatDuration(latenessMins)}`
+                              : `Late: ${formatDuration(latenessMins)}`}
+                          </span>
+                          <div className="flex items-center gap-1 text-[9px] font-semibold text-muted-foreground">
+                            <button
+                              onClick={() => updateStatus.mutate({ id: apt._id, status: 'no-show' })}
+                              className="hover:text-destructive transition-colors"
+                              title="Mark as No-show"
+                            >
+                              No-show
+                            </button>
+                            <span>·</span>
+                            <button
+                              onClick={() => setRescheduleApt(apt)}
+                              className="hover:text-primary transition-colors"
+                              title="Reschedule slot"
+                            >
+                              Reschedule
+                            </button>
+                            <span>·</span>
+                            <button
+                              onClick={() => {
+                                if (window.confirm('Are you sure you want to cancel this appointment?')) {
+                                  cancelAppointment.mutate(apt._id);
+                                }
+                              }}
+                              className="hover:text-destructive transition-colors text-destructive/80"
+                              title="Cancel slot"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </td>
                 <td className={`${cellPadding} whitespace-nowrap`}>
@@ -136,7 +284,19 @@ export const AppointmentsTable = ({
                   <StatusDropdown appointment={apt} />
                 </td>
                 <td className={`${cellPadding} whitespace-nowrap`}>
-                  <IntakeStatusBadge status={apt.intakeStatus} />
+                  {apt.intakeStatus === 'pending' || apt.intakeStatus === 'not-sent' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIntakeApt(apt)}
+                      className="h-7 text-[10px] font-semibold rounded-lg border-primary/30 text-primary hover:bg-primary/10 gap-1"
+                    >
+                      <ClipboardPlus className="w-3 h-3" />
+                      Fill Intake
+                    </Button>
+                  ) : (
+                    <IntakeStatusBadge status={apt.intakeStatus} />
+                  )}
                 </td>
                 {showReminders && (
                   <td className={cellPadding}>
@@ -156,6 +316,20 @@ export const AppointmentsTable = ({
           </tbody>
         </table>
       </div>
+      {rescheduleApt && (
+        <RescheduleDialog
+          appointment={rescheduleApt}
+          open={!!rescheduleApt}
+          onOpenChange={(open) => !open && setRescheduleApt(null)}
+        />
+      )}
+      {intakeApt && (
+        <NewIntakeFormDialog
+          open={!!intakeApt}
+          onOpenChange={(open) => !open && setIntakeApt(null)}
+          prefillAppointment={intakeApt}
+        />
+      )}
     </>
   );
 };

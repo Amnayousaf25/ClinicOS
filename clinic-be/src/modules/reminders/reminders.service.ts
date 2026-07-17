@@ -7,6 +7,12 @@ import {
   AppointmentDocument,
   AppointmentStatus,
 } from 'src/modules/appointments/schemas/appointment.schema';
+import {
+  AppointmentHistory,
+  AppointmentHistoryDocument,
+  AppointmentHistoryAction,
+  AppointmentHistoryActor,
+} from 'src/modules/appointments/schemas/appointment-history.schema';
 import { ClinicSettingsService } from 'src/modules/clinic-settings/clinic-settings.service';
 import { SmsService } from 'src/modules/sms/sms.service';
 import { EmailService } from 'src/modules/email/services/email-service';
@@ -80,6 +86,8 @@ export class RemindersService {
     private logModel: Model<ReminderLogDocument>,
     @InjectModel(Appointment.name)
     private appointmentModel: Model<AppointmentDocument>,
+    @InjectModel(AppointmentHistory.name)
+    private historyModel: Model<AppointmentHistoryDocument>,
     private settingsService: ClinicSettingsService,
     private smsService: SmsService,
     private emailService: EmailService,
@@ -198,10 +206,18 @@ export class RemindersService {
     clinic: string,
   ) {
     const { name } = patientIdentity(apt);
+    const serviceName = (apt.serviceId as any)?.name || 'Service';
+    const providerName = (apt.providerId as any)?.name || 'Provider';
+    const dateTime = `${apt.date} at ${apt.time}`;
+
     return template
       .replace(/{name}/g, name)
+      .replace(/{patient_name}/g, name)
       .replace(/{date}/g, apt.date)
       .replace(/{time}/g, apt.time)
+      .replace(/{date_time}/g, dateTime)
+      .replace(/{service_name}/g, serviceName)
+      .replace(/{provider_name}/g, providerName)
       .replace(/{clinic_name}/g, clinic);
   }
 
@@ -313,7 +329,8 @@ export class RemindersService {
         orgId: new Types.ObjectId(orgId),
       })
       .populate('patientId', '_id name phone email mrn')
-      .populate('serviceId', '_id name');
+      .populate('serviceId', '_id name')
+      .populate('providerId', '_id name title');
     if (!apt) throw new NotFoundException('Appointment not found');
 
     const config = await this.getConfig(
@@ -724,6 +741,117 @@ export class RemindersService {
         log.status = ReminderLogStatus.Scheduled;
         log.scheduledMessageId = result.sid;
         await log.save();
+      }
+    }
+  }
+
+  async processLateAppointments() {
+    const now = new Date();
+    // Fetch all pending or confirmed appointments
+    const appointments = await this.appointmentModel
+      .find({
+        status: { $in: [AppointmentStatus.Pending, AppointmentStatus.Confirmed] },
+      })
+      .populate('patientId', '_id name phone email mrn')
+      .populate('serviceId', '_id name')
+      .populate('providerId', '_id name title');
+
+    if (appointments.length === 0) return;
+
+    for (const apt of appointments) {
+      const aptDateTime = parseUtcDateTimeKey(apt.date, apt.time);
+      if (!aptDateTime) continue;
+
+      // Calculate diff in minutes
+      const diffMins = Math.floor((now.getTime() - aptDateTime.getTime()) / 60000);
+
+      // If they are more than 2 hours late (120 minutes)
+      if (diffMins > 120) {
+        this.logger.log(
+          `Auto-marking appointment ${apt._id.toString()} as No-show. Late by ${diffMins} minutes.`,
+        );
+
+        const fromStatus = apt.status;
+        apt.status = AppointmentStatus.NoShow;
+        await apt.save();
+
+        const identity = patientIdentity(apt);
+
+        // Record history entry
+        try {
+          await this.historyModel.create({
+            appointmentId: apt._id,
+            orgId: apt.orgId,
+            patientPhone: identity.phone || '',
+            action: AppointmentHistoryAction.StatusChanged,
+            fromDate: null,
+            fromTime: null,
+            toDate: null,
+            toTime: null,
+            fromStatus,
+            toStatus: AppointmentStatus.NoShow,
+            reason: `Auto-marked as No-show: 2-hour grace period expired (${diffMins} mins late)`,
+            actor: AppointmentHistoryActor.System,
+            changedBy: null,
+          });
+        } catch (err: any) {
+          this.logger.error(`Failed to write auto-no-show history for ${apt._id.toString()}: ${err.message}`);
+        }
+
+        // No SMS/Email is sent to the patient on no-show — only the status is updated and history logged.
+      } else if (diffMins >= 15) {
+        // If they are 15 minutes to 2 hours late, trigger a warning SMS/Email alert (only once)
+        const identity = patientIdentity(apt);
+
+        // Check if we already sent a late alert to avoid duplicate alerts
+        const alreadyAlerted = await this.logModel.findOne({
+          appointmentId: apt._id,
+          messageType: 'late_reminder',
+        });
+
+        if (!alreadyAlerted) {
+          this.logger.log(
+            `Sending general late alert for appointment ${apt._id.toString()}. Patient is ${diffMins} minutes late.`,
+          );
+
+          const settings = await this.settingsService.getOrCreate(apt.orgId);
+          const clinicName = settings.clinicName || 'ClinicOS';
+          const serviceName = (apt.serviceId as any)?.name || 'Service';
+
+          const body = `Hi ${identity.name || 'Patient'}, you are currently late for your appointment for ${serviceName} at ${clinicName}. Please contact us if you need help or want to reschedule.`;
+
+          if (identity.phone) {
+            try {
+              const result = await this.smsService.sendSms(identity.phone, body);
+              await this.logModel.create({
+                orgId: apt.orgId,
+                appointmentId: apt._id,
+                patientName: identity.name || 'Patient',
+                phone: identity.phone,
+                messageType: 'late_reminder',
+                sentAt: new Date(),
+                status: result.success ? ReminderLogStatus.Delivered : ReminderLogStatus.Failed,
+                messageBody: body,
+                messageId: result.sid || null,
+                errorMessage: result.error || null,
+              });
+            } catch (err: any) {
+              this.logger.error(`Failed to send late warning SMS for ${apt._id.toString()}: ${err.message}`);
+            }
+          }
+
+          if (identity.email) {
+            try {
+              await this.emailService.sendEmail(
+                identity.email,
+                `Running Late? - ${clinicName}`,
+                body,
+              );
+            } catch (err: any) {
+              this.logger.error(`Failed to send late warning Email for ${apt._id.toString()}: ${err.message}`);
+            }
+          }
+        }
       }
     }
   }

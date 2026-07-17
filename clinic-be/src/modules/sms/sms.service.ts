@@ -30,15 +30,16 @@ export class SmsService {
     if (compact.startsWith('03') && compact.length === 11) {
       return `+92${compact.slice(1)}`;
     }
+    if (compact.startsWith('3') && compact.length === 10) {
+      return `+92${compact}`;
+    }
     if (compact.startsWith('92')) return `+${compact}`;
     return compact;
   }
 
   private isPakistan(phone: string): boolean {
     return this.normalizePhone(phone).startsWith('+92');
-  }
-
-  /** Send SMS immediately */
+  }  /** Send SMS immediately */
   async sendSms(to: string, body: string): Promise<SmsResult> {
     const normalizedTo = this.normalizePhone(to);
     const masked = this.maskPhone(normalizedTo);
@@ -50,12 +51,6 @@ export class SmsService {
       if (this.isPakistan(normalizedTo)) {
         if (this.lifetime.isConfigured) {
           const res = await this.lifetime.send(normalizedTo, body);
-          if (!res.success && isDev) {
-            this.logger.warn(
-              `[DEV FALLBACK] LifetimeSMS failed, falling back to dry-run success: ${res.error}`,
-            );
-            return { success: true, sid: 'dry-run-pk-fallback' };
-          }
           return res;
         } else {
           if (isDev) {
@@ -69,39 +64,25 @@ export class SmsService {
       } else {
         if (this.telnyx.isConfigured) {
           const res = await this.telnyx.send(normalizedTo, body);
-          if (!res.success && isDev) {
-            this.logger.warn(
-              `[DEV FALLBACK] Telnyx failed, falling back to dry-run success: ${res.error}`,
-            );
-            return { success: true, sid: 'dry-run-telnyx-fallback' };
-          }
           return res;
         }
         if (this.lifetime.isConfigured) {
           const res = await this.lifetime.send(normalizedTo, body);
-          if (!res.success && isDev) {
-            this.logger.warn(
-              `[DEV FALLBACK] LifetimeSMS failed, falling back to dry-run success: ${res.error}`,
-            );
-            return { success: true, sid: 'dry-run-pk-fallback' };
-          }
           return res;
         }
+        if (isDev) {
+          this.logger.warn(
+            `[DRY RUN] SMS to international number ${masked} (No SMS providers configured)`,
+          );
+          return { success: true, sid: 'dry-run-intl' };
+        }
+        return { success: false, error: 'no_sms_provider_configured' };
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       this.logger.error(`SMS error to ${masked}: ${msg}`);
-      if (isDev) {
-        this.logger.warn(
-          `[DEV FALLBACK] SMS error caught, falling back to dry-run success`,
-        );
-        return { success: true, sid: 'dry-run-error-fallback' };
-      }
       return { success: false, error: msg };
     }
-
-    this.logger.warn(`[DRY RUN] SMS to ${masked}`);
-    return { success: true, sid: 'dry-run' };
   }
 
   /**
@@ -117,8 +98,6 @@ export class SmsService {
     const normalizedTo = this.normalizePhone(to);
     const masked = this.maskPhone(normalizedTo);
 
-    const isDev = process.env.NODE_ENV === 'dev';
-
     // Telnyx constraint: 5 min – 5 days from now
     const now = Date.now();
     const delayMs = sendAt.getTime() - now;
@@ -129,16 +108,6 @@ export class SmsService {
       this.logger.warn(
         `Cannot schedule SMS to ${masked}: send_at ${sendAt.toISOString()} outside 5min–5day window`,
       );
-      if (isDev) {
-        this.logger.warn(
-          `[DEV FALLBACK] Simulating scheduled SMS outside 5min-5day window to ${masked}`,
-        );
-        return {
-          success: true,
-          scheduled: true,
-          sid: 'dry-run-schedule-window-fallback',
-        };
-      }
       return {
         success: false,
         scheduled: false,
@@ -151,16 +120,6 @@ export class SmsService {
       this.logger.warn(
         `Cannot schedule SMS to ${masked}: Pakistan number, no scheduling support`,
       );
-      if (isDev) {
-        this.logger.warn(
-          `[DEV FALLBACK] Simulating scheduled SMS to Pakistan number ${masked}`,
-        );
-        return {
-          success: true,
-          scheduled: true,
-          sid: 'dry-run-schedule-pk',
-        };
-      }
       return {
         success: false,
         scheduled: false,
@@ -172,16 +131,6 @@ export class SmsService {
       this.logger.warn(
         `Cannot schedule SMS to ${masked}: Telnyx not configured`,
       );
-      if (isDev) {
-        this.logger.warn(
-          `[DEV FALLBACK] Simulating scheduled SMS to ${masked} (no Telnyx)`,
-        );
-        return {
-          success: true,
-          scheduled: true,
-          sid: 'dry-run-schedule-telnyx',
-        };
-      }
       return {
         success: false,
         scheduled: false,
@@ -191,22 +140,10 @@ export class SmsService {
 
     try {
       const result = await this.telnyx.schedule(normalizedTo, body, sendAt);
-      if (!result.success && isDev) {
-        this.logger.warn(
-          `[DEV FALLBACK] Telnyx schedule failed, falling back to dry-run success: ${result.error}`,
-        );
-        return { success: true, scheduled: true, sid: 'dry-run-schedule-telnyx-fallback' };
-      }
       return { ...result, scheduled: result.success };
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       this.logger.error(`Schedule SMS error to ${masked}: ${msg}`);
-      if (isDev) {
-        this.logger.warn(
-          `[DEV FALLBACK] Schedule SMS error caught, falling back to dry-run success`,
-        );
-        return { success: true, scheduled: true, sid: 'dry-run-schedule-error-fallback' };
-      }
       return { success: false, scheduled: false, error: msg };
     }
   }
@@ -216,5 +153,4 @@ export class SmsService {
     if (!this.telnyx.isConfigured) return false;
     return this.telnyx.cancelScheduled(messageId);
   }
-
 }

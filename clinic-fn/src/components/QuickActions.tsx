@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { type Appointment } from '@/types';
 import { useSendAppointmentSms } from '@/hooks/useApi';
 import {
@@ -6,9 +5,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ClipboardPlus, MessageSquare } from 'lucide-react';
-import NewIntakeFormDialog from '@/components/NewIntakeFormDialog';
-import { cn } from '@/lib/utils';
+import { MessageSquare } from 'lucide-react';
 
 const TERMINAL_STATUSES: Appointment['status'][] = [
   'arrived',
@@ -18,7 +15,6 @@ const TERMINAL_STATUSES: Appointment['status'][] = [
 
 export const QuickActions = ({ appointment }: { appointment: Appointment }) => {
   const sendSms = useSendAppointmentSms();
-  const [intakeOpen, setIntakeOpen] = useState(false);
 
   const isSendingSms =
     sendSms.isPending && sendSms.variables === appointment._id;
@@ -32,13 +28,6 @@ export const QuickActions = ({ appointment }: { appointment: Appointment }) => {
   const isFinalized =
     TERMINAL_STATUSES.includes(appointment.status) || isIntakeSubmitted;
 
-  // Intake button should be visible for non-terminal statuses when intake is not yet submitted/confirmed
-  const showIntakeButton =
-    (appointment.status === 'pending' ||
-      appointment.status === 'confirmed' ||
-      appointment.status === 'rescheduled') &&
-    !isIntakeSubmitted;
-
   const smsTooltip = isFinalized
     ? isIntakeSubmitted
       ? 'Intake already submitted'
@@ -49,38 +38,6 @@ export const QuickActions = ({ appointment }: { appointment: Appointment }) => {
 
   return (
     <div className="flex items-center gap-1">
-      {showIntakeButton && (
-        <>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => !isIntakeSubmitted && setIntakeOpen(true)}
-                disabled={isIntakeSubmitted}
-                className={cn(
-                  'w-7 h-7 rounded-lg flex items-center justify-center border transition-colors',
-                  isIntakeSubmitted
-                    ? 'border-success/30 text-success bg-success/5 cursor-not-allowed opacity-80'
-                    : 'border-primary/30 text-primary hover:bg-primary/10',
-                )}
-                aria-label={isIntakeSubmitted ? 'Intake completed' : 'Add intake form'}
-              >
-                <ClipboardPlus className="w-3.5 h-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {isIntakeSubmitted ? 'Intake completed' : 'Add intake form'}
-            </TooltipContent>
-          </Tooltip>
-          {!isIntakeSubmitted && (
-            <NewIntakeFormDialog
-              open={intakeOpen}
-              onOpenChange={setIntakeOpen}
-              prefillAppointment={appointment}
-            />
-          )}
-        </>
-      )}
       <Tooltip>
         <TooltipTrigger asChild>
           <button

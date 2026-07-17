@@ -22,6 +22,10 @@ const HTTP_METHOD_DECORATORS = ['Get', 'Post', 'Put', 'Patch', 'Delete'];
 const ALLOWED_PUBLIC_METHODS = new Set<string>([
   // Auth endpoints that issue or validate auth state directly.
   'AuthController.login',
+  'AuthController.register',
+  'AuthController.forgotPassword',
+  'AuthController.verifyForgotPasswordOtp',
+  'AuthController.verifyResetPassword',
   // Auth self-service endpoint — JWT-protected and limited to the authenticated user,
   // so it intentionally has no additional @Permissions() requirement.
   'AuthController.changePassword',
@@ -71,6 +75,9 @@ const ALLOWED_PUBLIC_METHODS = new Set<string>([
   // Intake — public endpoints for patient form submission
   'IntakeController.getBookingInfo',
   'IntakeController.submitForm',
+  'IntakeController.getPublicAppointmentInfo',
+  'IntakeController.getSubmission',
+  'IntakeController.updateSubmission',
 
   // SMS webhook — public endpoint for Twilio incoming replies
   'SmsController.handleIncomingReply',

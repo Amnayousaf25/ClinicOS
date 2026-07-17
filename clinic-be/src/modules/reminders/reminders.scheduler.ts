@@ -34,4 +34,17 @@ export class RemindersScheduler {
       this.logger.error(`Upcoming reminders failed: ${err.message}`);
     }
   }
+
+  /**
+   * Every 15 minutes: search for pending/confirmed appointments that are
+   * over 2 hours late and auto-flag them as no-show with patient alert.
+   */
+  @Cron('*/15 * * * *')
+  async handleLateAppointments() {
+    try {
+      await this.remindersService.processLateAppointments();
+    } catch (err: any) {
+      this.logger.error(`Late appointments auto-no-show failed: ${err.message}`);
+    }
+  }
 }

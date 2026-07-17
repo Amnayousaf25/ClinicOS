@@ -9,6 +9,10 @@ import {
   Appointment,
   AppointmentSchema,
 } from 'src/modules/appointments/schemas/appointment.schema';
+import {
+  AppointmentHistory,
+  AppointmentHistorySchema,
+} from 'src/modules/appointments/schemas/appointment-history.schema';
 import { RemindersController } from './reminders.controller';
 import { RemindersService } from './reminders.service';
 import { RemindersScheduler } from './reminders.scheduler';
@@ -22,6 +26,7 @@ import { EmailModule } from 'src/modules/email/email.module';
       { name: ReminderConfig.name, schema: ReminderConfigSchema },
       { name: ReminderLog.name, schema: ReminderLogSchema },
       { name: Appointment.name, schema: AppointmentSchema },
+      { name: AppointmentHistory.name, schema: AppointmentHistorySchema },
     ]),
     ClinicSettingsModule,
     SmsModule,
